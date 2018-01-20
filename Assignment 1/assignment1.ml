@@ -4,6 +4,7 @@ exception AtFirst;;
 exception TooShort;;
 exception Error;;
 open List;;
+open String;;
 
 type 'a myString = EmptyString | Alphabet of 'a | Combine of ('a list * 'a list * 'a * 'a);;
 
@@ -14,7 +15,7 @@ let rec rev a = match a with
 let lgh myString = match myString with
   |  EmptyString -> 0
   |  Alphabet (a)-> 1
-  |  Combine (a,b,c,d) -> (length a) + (length b);;
+  |  Combine (a,b,c,d) -> (List.length a) + (List.length b);;
 
 
 let nonempty myString = match myString with
@@ -29,8 +30,6 @@ let concat a b = match (a,b) with
   | (Alphabet(e1),Combine(a1,b1,c1,d1)) ->  Combine(a1@[e1],b1,e1,d1)
   | (Combine(a1,b1,c1,d1),Alphabet(e1)) ->  Combine(a1,b1@[e1],c1,e1)
   | (Combine(a1,b1,c1,d1),Combine(a2,b2,c2,d2)) ->  Combine( a1,b1@ (rev a2) @ b2 ,c1,d2) ;;
-
-
 
 let reverse myString = match myString with
   |  EmptyString -> EmptyString
@@ -47,8 +46,13 @@ let last myString = match myString with
   | Alphabet(a) -> a
   | Combine(a,b,c,d) -> d;;
 
-(* let create String =
-  | ""; *)
+let rec stringToList string = match string with
+  | "" -> []
+  | string -> (String.get string 0) :: stringToList (String.sub string 1 ((String.length string)-1));;
+
+let create string = match string with
+  | "" -> EmptyString
+  | string -> if (String.length string > 1) then Combine([String.get string 0],stringToList (String.sub string 1 ((String.length string)-1)),String.get string 0,String.get string ((String.length string)- 1))   else Alphabet(String.get string 0);;
 
 let forward myString = match myString with
   | EmptyString -> raise AtLast
@@ -85,12 +89,12 @@ let moveTo n s = match (n,s) with
   | (0,Alphabet(a)) -> Alphabet(a)
   | (_,Alphabet(a)) -> raise TooShort
   | (n,Combine(a,b,c,d)) -> 	if((lgh(Combine(a,b,c,d))) > n)
-    then (		if ((length a)-1) = n
+    then (		if ((List.length a)-1) = n
             then Combine(a,b,c,d)
-            else if ((length a)-1) < n   then
-              forward2 (Combine(a,b,c,d),(n - length a) + 1)
+            else if ((List.length a)-1) < n   then
+              forward2 (Combine(a,b,c,d),(n - List.length a) + 1)
             else
-              back2 (Combine(a,b,c,d), (n - length a) + 1)
+              back2 (Combine(a,b,c,d), (n - List.length a) + 1)
          )
     else raise TooShort;;
 
@@ -101,3 +105,12 @@ let replace w s = match (w,s) with
   | (w,Combine(x::xs,[],c,d)) -> Combine([w]@xs,[],c,w)
   | (w,Combine(x::xs,b,c,d)) ->  Combine([w]@xs,b,c,d)
   | (w,Combine([],b,c,d)) -> raise Error;;
+
+let rec printList l = match l with
+  | [] -> ""
+  | x::xs ->  (String.make 1 x)^(printList xs);;
+
+let print myString = match myString with
+  | EmptyString -> ""
+  | Alphabet(a) -> (String.make 1 a)
+  | Combine(a,b,c,d) -> printList((rev a)@b) ;;
