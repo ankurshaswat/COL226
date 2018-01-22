@@ -8,7 +8,6 @@ open String;;
 
 type 'a myString = {mutable a:'a list;mutable b:'a list;mutable c:'a;mutable d:'a};;
 
-
 (* val rev : 'a list -> 'a list = <fun>   Helping Function*)
 let rec rev a = match a with
   |  [] ->  []
