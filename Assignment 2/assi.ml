@@ -1,5 +1,5 @@
+open List;;
 exception Error;;
-
 
 type exp = Const of int
          |Abs of exp
@@ -23,13 +23,11 @@ type exp = Const of int
          |Tuple of exp list
          |Projection of int * exp list;;
 
-(* type tuple = exp list;; *)
+type answer = Const of int | Const1 of bool | Tuple of answer list;;
 
+let table =[ "x",Const(5);"y",Const1(true) ];;
 
-type answer = Const of int | Const1 of bool | Tuple2 of answer list;;
-
-
-let lookup s = 0;;
+let lookup s = List.assoc s table;;
 
 let rec pow (a,b) = match b with
     0 -> 1
@@ -40,58 +38,56 @@ let rec map f l = match l with
   | []-> []
   | x::xs -> (f x)::(map f xs);;
 
-let rec evalint e= match e with
-  |Abs(e1) ->abs(evalint(e1))
+let rec evalint lookup e= match e with
+  |Abs(e1) ->abs(evalint lookup e1)
   |Const n ->  n
-  |Identifier s->lookup(s)
-  |Addition (e1,e2)-> (evalint(e1)+evalint(e2))
-  |Subtraction (e1,e2)-> (evalint(e1)-evalint(e2))
-  |Multiplication (e1,e2)-> (evalint(e1)*evalint(e2))
-  |Division (e1,e2)-> (evalint(e1)/evalint(e2))
-  |Modulus (e1,e2)-> (evalint(e1) mod evalint(e2))
-  |Exponentiation (e1,e2)-> (pow(evalint(e1),evalint(e2)))
+  |Identifier s-> (match lookup(s) with Const(n) -> n | _ -> raise Error)
+  |Addition (e1,e2)-> ((evalint lookup e1)+(evalint lookup e2))
+  |Subtraction (e1,e2)-> ((evalint lookup e1)-(evalint lookup e2))
+  |Multiplication (e1,e2)-> ((evalint lookup e1)*(evalint lookup e2))
+  |Division (e1,e2)-> ((evalint lookup e1)/(evalint lookup e2))
+  |Modulus (e1,e2)-> ((evalint lookup e1) mod (evalint lookup e2))
+  |Exponentiation (e1,e2)-> (pow((evalint lookup e1),(evalint lookup e2)))
   | _ -> raise Error ;;
-(* ;; *)
 
-let rec evalbool e= match e with
-  |Not(e1) -> not(evalbool(e1))
+let rec evalbool lookup e= match e with
+  |Not(e1) -> not((evalbool lookup e1))
   |Const1 b -> b
-  |And(e1,e2) ->  evalbool(e1) && evalbool(e2)
-  |Or(e1,e2) -> evalbool(e1) || evalbool(e2)
-  |Implies(e1,e2) -> evalbool(Or(And(Const1(evalbool(e1)),Const1(evalbool(e2))),Not(Const1(evalbool(e1)))))
-  |Equal(e1,e2) -> evalint(e1) = evalint(e2)
-  |GreaterThan(e1,e2) -> evalint(e1) > evalint(e2)
-  |LessThan(e1,e2) -> evalint(e1) < evalint(e2)
-  |GreaterOrEqual(e1,e2) -> evalint(e1) >= evalint(e2)
-  |LessOrEqual(e1,e2) -> evalint(e1) <= evalint(e2)
+  |Identifier s-> (match lookup(s) with Const1(n) -> n | _ -> raise Error)
+  |And(e1,e2) ->  (evalbool lookup e1) && (evalbool lookup e2)
+  |Or(e1,e2) -> (evalbool lookup e1) || (evalbool lookup e2)
+  |Implies(e1,e2) -> evalbool lookup (Or(And(Const1((evalbool lookup e1)),Const1((evalbool lookup e2))),Not(Const1((evalbool lookup e1)))))
+  |Equal(e1,e2) -> (evalint lookup e1) = (evalint lookup e2)
+  |GreaterThan(e1,e2) -> (evalint lookup e1) > (evalint lookup e2)
+  |LessThan(e1,e2) -> (evalint lookup e1) < (evalint lookup e2)
+  |GreaterOrEqual(e1,e2) -> (evalint lookup e1) >= (evalint lookup e2)
+  |LessOrEqual(e1,e2) -> (evalint lookup e1) <= (evalint lookup e2)
   | _ -> raise Error ;;
-(* ;; *)
 
-let rec eval e =match e with
-  |Abs(e1) ->Const(evalint(Abs(e1)))
+let rec eval lookup e =match e with
+  |Abs(e1) ->Const(evalint lookup (Abs(e1)))
   |Const n -> Const n
-  |Identifier s->Const(evalint(Identifier(s)))
-  |Addition (e1,e2)->Const (evalint(Addition (e1,e2)))
-  |Subtraction (e1,e2)->Const (evalint(Subtraction (e1,e2)))
-  |Multiplication (e1,e2)->Const (evalint(Multiplication (e1,e2)))
-  |Division (e1,e2)->Const (evalint(Division (e1,e2)))
-  |Modulus (e1,e2)->Const (evalint(Modulus (e1,e2)))
-  |Exponentiation (e1,e2)->Const (evalint(Exponentiation (e1,e2)))
+  |Identifier s->  lookup(s)
+  |Addition (e1,e2)->Const (evalint lookup (Addition (e1,e2)))
+  |Subtraction (e1,e2)->Const (evalint lookup (Subtraction (e1,e2)))
+  |Multiplication (e1,e2)->Const (evalint lookup (Multiplication (e1,e2)))
+  |Division (e1,e2)->Const (evalint lookup (Division (e1,e2)))
+  |Modulus (e1,e2)->Const (evalint lookup (Modulus (e1,e2)))
+  |Exponentiation (e1,e2)->Const (evalint lookup (Exponentiation (e1,e2)))
   |Const1 b -> Const1 b
-  |Not(e1) -> Const1(evalbool(Not(e1)))
-  |And(e1,e2) -> Const1(evalbool(And(e1,e2)))
-  |Or(e1,e2) -> Const1(evalbool(Or(e1,e2)))
-  |Implies(e1,e2) -> Const1(evalbool(Implies(e1,e2)))
-  |Equal(e1,e2) -> Const1(evalbool(Equal(e1,e2)))
-  |GreaterThan(e1,e2) -> Const1(evalbool(GreaterThan(e1,e2)))
-  |LessThan(e1,e2) -> Const1(evalbool(LessThan(e1,e2)))
-  |GreaterOrEqual(e1,e2) -> Const1(evalbool(GreaterOrEqual(e1,e2)))
-  |LessOrEqual(e1,e2) -> Const1(evalbool(LessOrEqual(e1,e2)))
-  |Tuple(l) -> Tuple2(map eval l)
-  |Projection(0,x::xs) -> eval(x)
-  |Projection(i,x::xs) -> eval(Projection(i-1,xs))
-  |Projection(_,_)-> raise Error
-;;
+  |Not(e1) -> Const1(evalbool lookup (Not(e1)))
+  |And(e1,e2) -> Const1(evalbool lookup (And(e1,e2)))
+  |Or(e1,e2) -> Const1(evalbool lookup (Or(e1,e2)))
+  |Implies(e1,e2) -> Const1(evalbool lookup (Implies(e1,e2)))
+  |Equal(e1,e2) -> Const1(evalbool lookup (Equal(e1,e2)))
+  |GreaterThan(e1,e2) -> Const1(evalbool lookup (GreaterThan(e1,e2)))
+  |LessThan(e1,e2) -> Const1(evalbool lookup (LessThan(e1,e2)))
+  |GreaterOrEqual(e1,e2) -> Const1(evalbool lookup (GreaterOrEqual(e1,e2)))
+  |LessOrEqual(e1,e2) -> Const1(evalbool lookup (LessOrEqual(e1,e2)))
+  |Tuple(l) -> Tuple(map (eval lookup) l)
+  |Projection(0,x::xs) -> eval lookup (x)
+  |Projection(i,x::xs) -> eval lookup (Projection(i-1,xs))
+  |Projection(_,_)-> raise Error;;
 
 type opcode =CONST of int
             |ABS
@@ -136,15 +132,12 @@ let rec compile e = match e with
   |GreaterOrEqual(e1,e2) -> compile(e1)@compile(e2)@[GREATEROREQUAL]
   |LessOrEqual(e1,e2) -> compile(e1)@compile(e2)@[LESSOREQUAL]
   |Tuple(l) -> [TUPLE(map compile l)]
-  |Projection(n,expl) -> [CONST(n)]@[TUPLE(map compile expl)]@[PROJECTION]
-;;
+  |Projection(n,expl) -> [CONST(n)]@[TUPLE(map compile expl)]@[PROJECTION];;
 
-(* type stack = answer list;; *)
-
-let rec execute stack table opcodeL = match (stack,table,opcodeL) with
+let rec execute stack tab opcodeL = match (stack,tab,opcodeL) with
   |(Const(a)::s1,t,ABS::c) -> execute (Const(abs(a))::s1) t c
   |(s1,t,CONST(n)::c) -> execute (Const(n)::s1) t c
-  |(s1,t,IDENTIFIER(s)::c) -> execute (Const(lookup s)::s1) t c
+  |(s1,t,IDENTIFIER(s)::c) -> execute ((List.assoc s tab)::s1) t c
   |(Const(a)::Const(b)::s1,t,ADDITION::c) -> execute (Const(a+b)::s1) t c
   |(Const(a)::Const(b)::s1,t,SUBTRACTION::c) -> execute (Const(a-b)::s1) t c
   |(Const(a)::Const(b)::s1,t,MULTIPLICATION::c) -> execute (Const(a*b)::s1) t c
@@ -161,11 +154,8 @@ let rec execute stack table opcodeL = match (stack,table,opcodeL) with
   |(Const1(x)::Const1(y)::s1,t,LESSTHAN::c) -> execute (Const1(x<y)::s1) t c
   |(Const1(x)::Const1(y)::s1,t,GREATEROREQUAL::c) -> execute (Const1(x>=y)::s1) t c
   |(Const1(x)::Const1(y)::s1,t,LESSOREQUAL::c) -> execute (Const1(x<=y)::s1) t c
-  |(s1,t,TUPLE(l)::c) -> execute (Tuple2(map (execute [] t) l)::s1) t c
-  |(Tuple2(x::xs)::Const(0)::s1,t,PROJECTION::c) -> execute (x::s1) t c
-  |(Tuple2(x::xs)::Const(n)::s1,t,PROJECTION::c) -> execute (Tuple2(xs)::Const(n-1)::s1) t (PROJECTION::c)
+  |(s1,t,TUPLE(l)::c) -> execute (Tuple(map (execute [] t) l)::s1) t c
+  |(Tuple(x::xs)::Const(0)::s1,t,PROJECTION::c) -> execute (x::s1) t c
+  |(Tuple(x::xs)::Const(n)::s1,t,PROJECTION::c) -> execute (Tuple(xs)::Const(n-1)::s1) t (PROJECTION::c)
   |(a::xs,t,[])-> a
-  | (_,_,_) -> raise Error
-  (* |(Const1(x),t,[])-> Const1(x) *)
-  (* | *)
-;;
+  | (_,_,_) -> raise Error;;
