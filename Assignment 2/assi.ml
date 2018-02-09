@@ -1,5 +1,6 @@
 exception Error;;
 
+
 type exp = Const of int
          |Abs of exp
          |Identifier of string
@@ -22,11 +23,13 @@ type exp = Const of int
          |Tuple of exp list
          |Projection of int * exp list;;
 
+(* type tuple = exp list;; *)
 
-type answer = Const of int | Const1 of bool | Tuple of answer list;;
+
+type answer = Const of int | Const1 of bool | Tuple2 of answer list;;
 
 
-let lookup s = 0;;
+let lookup t s = 0;;
 
 let rec pow (a,b) = match b with
     0 -> 1
@@ -87,5 +90,80 @@ let rec eval e =match e with
   |Tuple(l) -> Tuple(map eval l)
   |Projection(0,x::xs) -> eval(x)
   |Projection(i,x::xs) -> eval(Projection(i-1,xs))
-  |Projection(_,[])-> raise Error
+  |Projection(_,_)-> raise Error
+;;
+
+type opcode =CONST of int
+            |ABS
+            |IDENTIFIER of string
+            |ADDITION
+            |SUBTRACTION
+            |MULTIPLICATION
+            |DIVISION
+            |MODULUS
+            |EXPONENTIATION
+            |CONST1 of bool
+            |NOT
+            |AND
+            |OR
+            |IMPLIES
+            |EQUAL
+            |GREATERTHAN
+            |LESSTHAN
+            |GREATEROREQUAL
+            |LESSOREQUAL
+            |TUPLE of opcode list list
+            |PROJECTION;;
+
+let rec compile e = match e with
+  |Abs(e1) -> compile(e1)@[ABS]
+  |Const(n) -> [CONST(n)]
+  |Identifier s->[IDENTIFIER(s)]
+  |Addition (e1,e2)-> compile(e1)@compile(e2)@[ADDITION]
+  |Subtraction (e1,e2)->compile(e1)@compile(e2)@[SUBTRACTION]
+  |Multiplication (e1,e2)->compile(e1)@compile(e2)@[MULTIPLICATION]
+  |Division (e1,e2)->compile(e1)@compile(e2)@[DIVISION]
+  |Modulus (e1,e2)->compile(e1)@compile(e2)@[MODULUS]
+  |Exponentiation (e1,e2)->compile(e1)@compile(e2)@[EXPONENTIATION]
+  |Const1 b -> [CONST1(b)]
+  |Not(e1) -> compile(e1)@[NOT]
+  |And(e1,e2) -> compile(e1)@compile(e2)@[AND]
+  |Or(e1,e2) -> compile(e1)@compile(e2)@[OR]
+  |Implies(e1,e2) ->compile(e1)@compile(e2)@[IMPLIES]
+  |Equal(e1,e2) -> compile(e1)@compile(e2)@[EQUAL]
+  |GreaterThan(e1,e2) -> compile(e1)@compile(e2)@[GREATERTHAN]
+  |LessThan(e1,e2) -> compile(e1)@compile(e2)@[LESSTHAN]
+  |GreaterOrEqual(e1,e2) -> compile(e1)@compile(e2)@[GREATEROREQUAL]
+  |LessOrEqual(e1,e2) -> compile(e1)@compile(e2)@[LESSOREQUAL]
+  |Tuple(l) -> [TUPLE(map compile l)]
+  |Projection(n,expl) -> [CONST(n)]@[TUPLE(map compile expl)]@[PROJECTION]
+;;
+
+type stack = answer list;;
+
+let rec execute stack table opcodeL = match (stack,table,opcodeL) with
+  |(Const(a)::s1,t,ABS::c) -> execute (Const(abs(a))::s1) t c
+  |(s1,t,CONST(n)::c) -> execute (Const(n)::s1) t c
+  |(s1,t,IDENTIFIER(s)::c) -> execute (Const(lookup t s)::s1) t c
+  |(Const(a)::Const(b)::s1,t,ADDITION::c) -> execute (Const(a+b)::s1) t c
+  |(Const(a)::Const(b)::s1,t,SUBTRACTION::c) -> execute (Const(a-b)::s1) t c
+  |(Const(a)::Const(b)::s1,t,MULTIPLICATION::c) -> execute (Const(a*b)::s1) t c
+  |(Const(a)::Const(b)::s1,t,DIVISION::c) -> execute (Const(a/b)::s1) t c
+  |(Const(a)::Const(b)::s1,t,MODULUS::c) -> execute (Const(a mod b)::s1) t c
+  |(Const(a)::Const(b)::s1,t,EXPONENTIATION::c) -> execute (Const(pow(a,b))::s1) t c
+  |(s1,t,CONST1(x)::c) -> execute (Const1(x)::s1) t c
+  |(Const1(x)::s1,t,NOT::c) -> execute (Const1(not(x))::s1) t c
+  |(Const1(x)::Const1(y)::s1,t,AND::c) -> execute (Const1(x&&y)::s1) t c
+  |(Const1(x)::Const1(y)::s1,t,OR::c) -> execute (Const1(x||y)::s1) t c
+  |(Const1(x)::Const1(y)::s1,t,IMPLIES::c) -> execute s1 t (CONST1(x)::CONST1(y)::AND::CONST1(x)::NOT::OR::c)
+  |(Const1(x)::Const1(y)::s1,t,EQUAL::c) -> execute (Const1(x=y)::s1) t c
+  |(Const1(x)::Const1(y)::s1,t,GREATERTHAN::c) -> execute (Const1(x>y)::s1) t c
+  |(Const1(x)::Const1(y)::s1,t,LESSTHAN::c) -> execute (Const1(x<y)::s1) t c
+  |(Const1(x)::Const1(y)::s1,t,GREATEROREQUAL::c) -> execute (Const1(x>=y)::s1) t c
+  |(Const1(x)::Const1(y)::s1,t,LESSOREQUAL::c) -> execute (Const1(x<=y)::s1) t c
+
+
+  |(a::xs,t,[])-> a
+  (* |(Const1(x),t,[])-> Const1(x) *)
+  (* | *)
 ;;
