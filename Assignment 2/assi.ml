@@ -48,7 +48,8 @@ let rec evalint lookup e= match e with
   |Division (e1,e2)-> ((evalint lookup e1)/(evalint lookup e2))
   |Modulus (e1,e2)-> ((evalint lookup e1) mod (evalint lookup e2))
   |Exponentiation (e1,e2)-> (pow((evalint lookup e1),(evalint lookup e2)))
-  | _ -> raise Error ;;
+  (* | _ -> raise Error *)
+   ;;
 
 let rec evalbool lookup e= match e with
   |Not(e1) -> not((evalbool lookup e1))
@@ -62,7 +63,8 @@ let rec evalbool lookup e= match e with
   |LessThan(e1,e2) -> (evalint lookup e1) < (evalint lookup e2)
   |GreaterOrEqual(e1,e2) -> (evalint lookup e1) >= (evalint lookup e2)
   |LessOrEqual(e1,e2) -> (evalint lookup e1) <= (evalint lookup e2)
-  | _ -> raise Error ;;
+  (* | _ -> raise Error  *)
+  ;;
 
 let rec eval lookup e =match e with
   |Abs(e1) ->Const(evalint lookup (Abs(e1)))
@@ -87,7 +89,8 @@ let rec eval lookup e =match e with
   |Tuple(l) -> Tuple(map (eval lookup) l)
   |Projection(0,x::xs) -> eval lookup (x)
   |Projection(i,x::xs) -> eval lookup (Projection(i-1,xs))
-  |Projection(_,_)-> raise Error;;
+  (* |Projection(_,_)-> raise Error *)
+  ;;
 
 type opcode =CONST of int
             |ABS
@@ -139,23 +142,60 @@ let rec execute stack tab opcodeL = match (stack,tab,opcodeL) with
   |(s1,t,CONST(n)::c) -> execute (Const(n)::s1) t c
   |(s1,t,IDENTIFIER(s)::c) -> execute ((List.assoc s tab)::s1) t c
   |(Const(a)::Const(b)::s1,t,ADDITION::c) -> execute (Const(a+b)::s1) t c
-  |(Const(a)::Const(b)::s1,t,SUBTRACTION::c) -> execute (Const(a-b)::s1) t c
+  |(Const(a)::Const(b)::s1,t,SUBTRACTION::c) -> execute (Const(b-a)::s1) t c
   |(Const(a)::Const(b)::s1,t,MULTIPLICATION::c) -> execute (Const(a*b)::s1) t c
-  |(Const(a)::Const(b)::s1,t,DIVISION::c) -> execute (Const(a/b)::s1) t c
-  |(Const(a)::Const(b)::s1,t,MODULUS::c) -> execute (Const(a mod b)::s1) t c
-  |(Const(a)::Const(b)::s1,t,EXPONENTIATION::c) -> execute (Const(pow(a,b))::s1) t c
+  |(Const(a)::Const(b)::s1,t,DIVISION::c) -> execute (Const(b/a)::s1) t c
+  |(Const(a)::Const(b)::s1,t,MODULUS::c) -> execute (Const(b mod a)::s1) t c
+  |(Const(a)::Const(b)::s1,t,EXPONENTIATION::c) -> execute (Const(pow(b,a))::s1) t c
   |(s1,t,CONST1(x)::c) -> execute (Const1(x)::s1) t c
   |(Const1(x)::s1,t,NOT::c) -> execute (Const1(not(x))::s1) t c
-  |(Const1(x)::Const1(y)::s1,t,AND::c) -> execute (Const1(x&&y)::s1) t c
-  |(Const1(x)::Const1(y)::s1,t,OR::c) -> execute (Const1(x||y)::s1) t c
-  |(Const1(x)::Const1(y)::s1,t,IMPLIES::c) -> execute s1 t (CONST1(x)::CONST1(y)::AND::CONST1(x)::NOT::OR::c)
-  |(Const1(x)::Const1(y)::s1,t,EQUAL::c) -> execute (Const1(x=y)::s1) t c
-  |(Const1(x)::Const1(y)::s1,t,GREATERTHAN::c) -> execute (Const1(x>y)::s1) t c
-  |(Const1(x)::Const1(y)::s1,t,LESSTHAN::c) -> execute (Const1(x<y)::s1) t c
-  |(Const1(x)::Const1(y)::s1,t,GREATEROREQUAL::c) -> execute (Const1(x>=y)::s1) t c
-  |(Const1(x)::Const1(y)::s1,t,LESSOREQUAL::c) -> execute (Const1(x<=y)::s1) t c
+  |(Const1(y)::Const1(x)::s1,t,AND::c) -> execute (Const1(x&&y)::s1) t c
+  |(Const1(y)::Const1(x)::s1,t,OR::c) -> execute (Const1(x||y)::s1) t c
+  |(Const1(y)::Const1(x)::s1,t,IMPLIES::c) -> execute s1 t (CONST1(x)::CONST1(y)::AND::CONST1(x)::NOT::OR::c)
+  |(Const(y)::Const(x)::s1,t,EQUAL::c) -> execute (Const1(x=y)::s1) t c
+  |(Const(y)::Const(x)::s1,t,GREATERTHAN::c) -> execute (Const1(x>y)::s1) t c
+  |(Const(y)::Const(x)::s1,t,LESSTHAN::c) -> execute (Const1(x<y)::s1) t c
+  |(Const(y)::Const(x)::s1,t,GREATEROREQUAL::c) -> execute (Const1(x>=y)::s1) t c
+  |(Const(y)::Const(x)::s1,t,LESSOREQUAL::c) -> execute (Const1(x<=y)::s1) t c
   |(s1,t,TUPLE(l)::c) -> execute (Tuple(map (execute [] t) l)::s1) t c
   |(Tuple(x::xs)::Const(0)::s1,t,PROJECTION::c) -> execute (x::s1) t c
   |(Tuple(x::xs)::Const(n)::s1,t,PROJECTION::c) -> execute (Tuple(xs)::Const(n-1)::s1) t (PROJECTION::c)
   |(a::xs,t,[])-> a
-  | (_,_,_) -> raise Error;;
+  (* | (_,_,_) -> raise Error *)
+  ;;
+
+(* Examples *)
+
+let z=Addition(Const(3),Const(4));;
+let z1=Multiplication(Const(3),Const(4));;
+let z2=Division(Const(3),Const(4));;
+let y=Subtraction(Const(10),Const(3));;
+let x= Equal(y,z);;
+let a=Not(x);;
+let a2=Not(a);;
+let a3=Implies(a,Const1(true));;
+
+eval lookup (z);;
+compile z;;
+execute [] table (compile z);;
+eval lookup (z1);;
+compile z1;;
+execute [] table (compile z1);;
+eval lookup (z2);;
+compile z2;;
+execute [] table (compile z2);;
+eval lookup (y);;
+compile y;;
+execute [] table (compile y);;
+eval lookup (x);;
+compile x;;
+execute [] table (compile x);;
+eval lookup (a);;
+compile a;;
+execute [] table (compile a);;
+eval lookup (a2);;
+compile a2;;
+execute [] table (compile a2);;
+eval lookup (a3);;
+compile a3;;
+execute [] table (compile a3);;
