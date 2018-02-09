@@ -29,7 +29,7 @@ type exp = Const of int
 type answer = Const of int | Const1 of bool | Tuple2 of answer list;;
 
 
-let lookup t s = 0;;
+let lookup s = 0;;
 
 let rec pow (a,b) = match b with
     0 -> 1
@@ -87,7 +87,7 @@ let rec eval e =match e with
   |LessThan(e1,e2) -> Const1(evalbool(LessThan(e1,e2)))
   |GreaterOrEqual(e1,e2) -> Const1(evalbool(GreaterOrEqual(e1,e2)))
   |LessOrEqual(e1,e2) -> Const1(evalbool(LessOrEqual(e1,e2)))
-  |Tuple(l) -> Tuple(map eval l)
+  |Tuple(l) -> Tuple2(map eval l)
   |Projection(0,x::xs) -> eval(x)
   |Projection(i,x::xs) -> eval(Projection(i-1,xs))
   |Projection(_,_)-> raise Error
@@ -139,12 +139,12 @@ let rec compile e = match e with
   |Projection(n,expl) -> [CONST(n)]@[TUPLE(map compile expl)]@[PROJECTION]
 ;;
 
-type stack = answer list;;
+(* type stack = answer list;; *)
 
 let rec execute stack table opcodeL = match (stack,table,opcodeL) with
   |(Const(a)::s1,t,ABS::c) -> execute (Const(abs(a))::s1) t c
   |(s1,t,CONST(n)::c) -> execute (Const(n)::s1) t c
-  |(s1,t,IDENTIFIER(s)::c) -> execute (Const(lookup t s)::s1) t c
+  |(s1,t,IDENTIFIER(s)::c) -> execute (Const(lookup s)::s1) t c
   |(Const(a)::Const(b)::s1,t,ADDITION::c) -> execute (Const(a+b)::s1) t c
   |(Const(a)::Const(b)::s1,t,SUBTRACTION::c) -> execute (Const(a-b)::s1) t c
   |(Const(a)::Const(b)::s1,t,MULTIPLICATION::c) -> execute (Const(a*b)::s1) t c
@@ -161,9 +161,11 @@ let rec execute stack table opcodeL = match (stack,table,opcodeL) with
   |(Const1(x)::Const1(y)::s1,t,LESSTHAN::c) -> execute (Const1(x<y)::s1) t c
   |(Const1(x)::Const1(y)::s1,t,GREATEROREQUAL::c) -> execute (Const1(x>=y)::s1) t c
   |(Const1(x)::Const1(y)::s1,t,LESSOREQUAL::c) -> execute (Const1(x<=y)::s1) t c
-
-
+  |(s1,t,TUPLE(l)::c) -> execute (Tuple2(map (execute [] t) l)::s1) t c
+  |(Tuple2(x::xs)::Const(0)::s1,t,PROJECTION::c) -> execute (x::s1) t c
+  |(Tuple2(x::xs)::Const(n)::s1,t,PROJECTION::c) -> execute (Tuple2(xs)::Const(n-1)::s1) t (PROJECTION::c)
   |(a::xs,t,[])-> a
+  | (_,_,_) -> raise Error
   (* |(Const1(x),t,[])-> Const1(x) *)
   (* | *)
 ;;
