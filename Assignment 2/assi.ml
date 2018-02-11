@@ -10,7 +10,8 @@ type exp = Const of int
          |Division of exp * exp
          |Modulus of exp * exp
          |Exponentiation of exp * exp
-         |Const1 of bool
+         |T
+         |F
          |Not of exp
          |And of exp * exp
          |Or of exp * exp
@@ -53,11 +54,12 @@ let rec evalint lookup e= match e with
 
 let rec evalbool lookup e= match e with
   |Not(e1) -> not((evalbool lookup e1))
-  |Const1 b -> b
+  |T -> true
+  |F -> false
   |Identifier s-> (match lookup(s) with Const1(n) -> n | _ -> raise Error)
   |And(e1,e2) ->  (evalbool lookup e1) && (evalbool lookup e2)
   |Or(e1,e2) -> (evalbool lookup e1) || (evalbool lookup e2)
-  |Implies(e1,e2) -> evalbool lookup (Or(And(Const1((evalbool lookup e1)),Const1((evalbool lookup e2))),Not(Const1((evalbool lookup e1)))))
+  |Implies(e1,e2) ->  (((evalbool lookup e1) && (evalbool lookup e2)) || not(evalbool lookup e1))
   |Equal(e1,e2) -> (evalint lookup e1) = (evalint lookup e2)
   |GreaterThan(e1,e2) -> (evalint lookup e1) > (evalint lookup e2)
   |LessThan(e1,e2) -> (evalint lookup e1) < (evalint lookup e2)
@@ -69,6 +71,8 @@ let rec evalbool lookup e= match e with
 let rec eval lookup e =match e with
   |Abs(e1) ->Const(evalint lookup (Abs(e1)))
   |Const n -> Const n
+  |T -> Const1(evalbool lookup (T))
+  |F -> Const1(evalbool lookup (F))
   |Identifier s->  lookup(s)
   |Addition (e1,e2)->Const (evalint lookup (Addition (e1,e2)))
   |Subtraction (e1,e2)->Const (evalint lookup (Subtraction (e1,e2)))
@@ -76,7 +80,6 @@ let rec eval lookup e =match e with
   |Division (e1,e2)->Const (evalint lookup (Division (e1,e2)))
   |Modulus (e1,e2)->Const (evalint lookup (Modulus (e1,e2)))
   |Exponentiation (e1,e2)->Const (evalint lookup (Exponentiation (e1,e2)))
-  |Const1 b -> Const1 b
   |Not(e1) -> Const1(evalbool lookup (Not(e1)))
   |And(e1,e2) -> Const1(evalbool lookup (And(e1,e2)))
   |Or(e1,e2) -> Const1(evalbool lookup (Or(e1,e2)))
@@ -101,7 +104,8 @@ type opcode =CONST of int
             |DIVISION
             |MODULUS
             |EXPONENTIATION
-            |CONST1 of bool
+            |TT
+            |FF
             |NOT
             |AND
             |OR
@@ -124,7 +128,8 @@ let rec compile e = match e with
   |Division (e1,e2)->compile(e1)@compile(e2)@[DIVISION]
   |Modulus (e1,e2)->compile(e1)@compile(e2)@[MODULUS]
   |Exponentiation (e1,e2)->compile(e1)@compile(e2)@[EXPONENTIATION]
-  |Const1 b -> [CONST1(b)]
+  |T -> [TT]
+  |F -> [FF]
   |Not(e1) -> compile(e1)@[NOT]
   |And(e1,e2) -> compile(e1)@compile(e2)@[AND]
   |Or(e1,e2) -> compile(e1)@compile(e2)@[OR]
@@ -147,11 +152,12 @@ let rec execute stack tab opcodeL = match (stack,tab,opcodeL) with
   |(Const(a)::Const(b)::s1,t,DIVISION::c) -> execute (Const(b/a)::s1) t c
   |(Const(a)::Const(b)::s1,t,MODULUS::c) -> execute (Const(b mod a)::s1) t c
   |(Const(a)::Const(b)::s1,t,EXPONENTIATION::c) -> execute (Const(pow(b,a))::s1) t c
-  |(s1,t,CONST1(x)::c) -> execute (Const1(x)::s1) t c
+  |(s1,t,TT::c) -> execute (Const1(true)::s1) t c
+  |(s1,t,FF::c) -> execute (Const1(false)::s1) t c
   |(Const1(x)::s1,t,NOT::c) -> execute (Const1(not(x))::s1) t c
   |(Const1(y)::Const1(x)::s1,t,AND::c) -> execute (Const1(x&&y)::s1) t c
   |(Const1(y)::Const1(x)::s1,t,OR::c) -> execute (Const1(x||y)::s1) t c
-  |(Const1(y)::Const1(x)::s1,t,IMPLIES::c) -> execute s1 t (CONST1(x)::CONST1(y)::AND::CONST1(x)::NOT::OR::c)
+  |(Const1(y)::Const1(x)::s1,t,IMPLIES::c) ->  execute (Const1(x && y || not(x))::s1) t c
   |(Const(y)::Const(x)::s1,t,EQUAL::c) -> execute (Const1(x=y)::s1) t c
   |(Const(y)::Const(x)::s1,t,GREATERTHAN::c) -> execute (Const1(x>y)::s1) t c
   |(Const(y)::Const(x)::s1,t,LESSTHAN::c) -> execute (Const1(x<y)::s1) t c
@@ -173,7 +179,7 @@ let y=Subtraction(Const(10),Const(3));;
 let x= Equal(y,z);;
 let a=Not(x);;
 let a2=Not(a);;
-let a3=Implies(a,Const1(true));;
+let a3=Implies(a,T);;
 
 eval lookup (z);;
 compile z;;
