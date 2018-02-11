@@ -24,11 +24,11 @@ type exp = Const of int
          |Tuple of exp list
          |Projection of int * exp list;;
 
-type answer = Const of int | Const1 of bool | Tuple of answer list;;
+type answer = Const of int | Const1 of bool | Tuple1 of answer list;;
 
 let table =[ "x",Const(5);"y",Const1(true) ];;
 
-let lookup s = List.assoc s table;;
+let rho s = List.assoc s table;;
 
 let rec pow (a,b) = match b with
     0 -> 1
@@ -89,7 +89,7 @@ let rec eval lookup e =match e with
   |LessThan(e1,e2) -> Const1(evalbool lookup (LessThan(e1,e2)))
   |GreaterOrEqual(e1,e2) -> Const1(evalbool lookup (GreaterOrEqual(e1,e2)))
   |LessOrEqual(e1,e2) -> Const1(evalbool lookup (LessOrEqual(e1,e2)))
-  |Tuple(l) -> Tuple(map (eval lookup) l)
+  |Tuple(l) -> Tuple1(map (eval lookup) l)
   |Projection(0,x::xs) -> eval lookup (x)
   |Projection(i,x::xs) -> eval lookup (Projection(i-1,xs))
   (* |Projection(_,_)-> raise Error *)
@@ -163,45 +163,89 @@ let rec execute stack tab opcodeL = match (stack,tab,opcodeL) with
   |(Const(y)::Const(x)::s1,t,LESSTHAN::c) -> execute (Const1(x<y)::s1) t c
   |(Const(y)::Const(x)::s1,t,GREATEROREQUAL::c) -> execute (Const1(x>=y)::s1) t c
   |(Const(y)::Const(x)::s1,t,LESSOREQUAL::c) -> execute (Const1(x<=y)::s1) t c
-  |(s1,t,TUPLE(l)::c) -> execute (Tuple(map (execute [] t) l)::s1) t c
-  |(Tuple(x::xs)::Const(0)::s1,t,PROJECTION::c) -> execute (x::s1) t c
-  |(Tuple(x::xs)::Const(n)::s1,t,PROJECTION::c) -> execute (Tuple(xs)::Const(n-1)::s1) t (PROJECTION::c)
+  |(s1,t,TUPLE(l)::c) -> execute (Tuple1(map (execute [] t) l)::s1) t c
+  |(Tuple1(x::xs)::Const(0)::s1,t,PROJECTION::c) -> execute (x::s1) t c
+  |(Tuple1(x::xs)::Const(n)::s1,t,PROJECTION::c) -> execute (Tuple1(xs)::Const(n-1)::s1) t (PROJECTION::c)
   |(a::xs,t,[])-> a
   (* | (_,_,_) -> raise Error *)
   ;;
 
 (* Examples *)
 
-let z=Addition(Const(3),Const(4));;
-let z1=Multiplication(Const(3),Const(4));;
-let z2=Division(Const(3),Const(4));;
-let y=Subtraction(Const(10),Const(3));;
-let x= Equal(y,z);;
-let a=Not(x);;
-let a2=Not(a);;
-let a3=Implies(a,T);;
-
-eval lookup (z);;
+let z=Abs(Const(-3));;
+eval rho (z);;
 compile z;;
 execute [] table (compile z);;
-eval lookup (z1);;
-compile z1;;
-execute [] table (compile z1);;
-eval lookup (z2);;
+let z=Addition(Const(3),Const(4));;
+eval rho (z);;
+compile z;;
+execute [] table (compile z);;
+let z2=Subtraction(Const(3),Const(4));;
+eval rho (z2);;
 compile z2;;
 execute [] table (compile z2);;
-eval lookup (y);;
-compile y;;
-execute [] table (compile y);;
-eval lookup (x);;
+let z1=Multiplication(Const(3),Const(4));;
+eval rho (z1);;
+compile z1;;
+execute [] table (compile z1);;
+let z2=Division(Const(3),Const(4));;
+eval rho (z2);;
+compile z2;;
+execute [] table (compile z2);;
+let z2=Modulus(Const(3),Const(4));;
+eval rho (z2);;
+compile z2;;
+execute [] table (compile z2);;
+let z2=Exponentiation(Const(3),Const(4));;
+eval rho (z2);;
+compile z2;;
+execute [] table (compile z2);;
+let y=Subtraction(Const(10),Const(32));;
+let x= Equal(y,z);;
+eval rho (x);;
 compile x;;
 execute [] table (compile x);;
-eval lookup (a);;
+let x= GreaterOrEqual(y,z);;
+eval rho (x);;
+compile x;;
+execute [] table (compile x);;
+let x= GreaterThan(y,z);;
+eval rho (x);;
+compile x;;
+execute [] table (compile x);;
+let x= LessThan(y,z);;
+eval rho (x);;
+compile x;;
+execute [] table (compile x);;
+let x= LessOrEqual(y,z);;
+eval rho (x);;
+compile x;;
+execute [] table (compile x);;
+let a=Not(x);;
+eval rho (a);;
 compile a;;
 execute [] table (compile a);;
-eval lookup (a2);;
-compile a2;;
-execute [] table (compile a2);;
-eval lookup (a3);;
+let a3=Implies(T,T);;
+eval rho (a3);;
 compile a3;;
 execute [] table (compile a3);;
+let a3=And(T,F);;
+eval rho (a3);;
+compile a3;;
+execute [] table (compile a3);;
+let a3=Or(F,T);;
+eval rho (a3);;
+compile a3;;
+execute [] table (compile a3);;
+let a3=Implies(F,F);;
+eval rho (a3);;
+compile a3;;
+execute [] table (compile a3);;
+let ab=Tuple([a3;x;y;z;a]);;
+eval rho (ab);;
+compile ab;;
+execute [] table (compile ab);;
+let ac=Projection(2,[a3;x;y;z;a]);;
+eval rho (ac);;
+compile ac;;
+execute [] table (compile ac);;
