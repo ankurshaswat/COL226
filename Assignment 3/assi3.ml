@@ -64,21 +64,30 @@ let rec find2 a lis = match lis with
   | (x,y)::xs -> if(a=x) then true else (find2 a xs)
   | [] -> false;;
 
-let substituions =[ Var("x"),Node(Sym("+"),[V(Var("y"));V(Var("z"))]) ];;
+type substss = Substituon1 of (variable * term);;
+
+let substituions = [ Substituon1(Var("x"),Node(Sym("+"),[V(Var("y"));V(Var("z"))])) ];;
 
 (* Each substituion is an element of the above list. Composition of substituions is a complete list in which the second substituion is appended to the first element. *)
 
-let rec subst substTable t  = match t with
-  | V(Var(s)) -> if (find2 (Var(s)) substTable) then (List.assoc (Var(s)) substTable) else V(Var(s))
-  | Node(Sym(s),tl) -> Node(Sym(s),(map (subst substTable) tl));;
+let rec applySubst subst t = match (t,subst) with
+  | (V(Var(s)),Substituon1(Var(t2),a)) -> if (s=t2) then a else V(Var(s))
+  | (Node(Sym(s),tl),_) -> Node(Sym(s), map (applySubst subst) tl);;
+
+let rec subst substList t  = match (substList,t) with
+  | (x::xs,t1) -> subst xs (applySubst x t1)
+  | ([],t1) -> t1;;
+
+(* | V(Var(s)) -> if (find2 (Var(s)) substTable) then (List.assoc (Var(s)) substTable) else V(Var(s)) *)
+(* | Node(Sym(s),tl) -> Node(Sym(s),(map (subst substTable) tl));; *)
 
 let rec mgu t1 t2 = match (t1,t2) with
-  | (V(Var(s)),V(Var(t))) -> if (s=t) then [] else [Var(s),V(Var(t))]
-  | (V(Var(s)),Node(Sym(sym),[])) ->  [Var(s),Node(Sym(sym),[])]
-  | (Node(Sym(sym),[]),V(Var(s))) ->  [Var(s),Node(Sym(sym),[])]
-  | (V(Var(s)),Node(Sym(sym),tl)) -> if (find (Var(s)) (vars(Node(Sym(sym),tl)))) then raise NOT_UNIFIABLE else [Var(s),Node(Sym(sym),tl)]
-  | (Node(Sym(sym),tl),V(Var(s))) -> if (find (Var(s)) (vars(Node(Sym(sym),tl)))) then raise NOT_UNIFIABLE else [Var(s),Node(Sym(sym),tl)]
+  | (V(Var(s)),V(Var(t))) -> if (s=t) then [] else [Substituon1(Var(s),V(Var(t)))]
+  | (V(Var(s)),Node(Sym(sym),[])) ->  [Substituon1(Var(s),Node(Sym(sym),[]))]
+  | (Node(Sym(sym),[]),V(Var(s))) ->  [Substituon1(Var(s),Node(Sym(sym),[]))]
+  | (V(Var(s)),Node(Sym(sym),tl)) -> if (find (Var(s)) (vars(Node(Sym(sym),tl)))) then raise NOT_UNIFIABLE else [Substituon1(Var(s),Node(Sym(sym),tl))]
+  | (Node(Sym(sym),tl),V(Var(s))) -> if (find (Var(s)) (vars(Node(Sym(sym),tl)))) then raise NOT_UNIFIABLE else [Substituon1(Var(s),Node(Sym(sym),tl))]
   | (Node(Sym(sym1),[]),Node(Sym(sym2),[])) ->  if (sym1=sym2) then [] else raise NOT_UNIFIABLE
   | (Node(Sym(sym1),[]),Node(Sym(sym2),tl)) ->  raise NOT_UNIFIABLE
   | (Node(Sym(sym2),tl),Node(Sym(sym1),[])) ->  raise NOT_UNIFIABLE
-  | (Node(Sym(sym1),x::xs),Node(Sym(sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else mgu (Node(Sym(sym1),(map (subst (mgu x y)) xs))) (Node(Sym(sym1),(map (subst (mgu x y)) ys)))   ;;
+  | (Node(Sym(sym1),x::xs),Node(Sym(sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else (mgu x y)@ (mgu (Node(Sym(sym1),(map (subst (mgu x y)) xs))) (Node(Sym(sym1),(map (subst (mgu x y)) ys))))   ;;
