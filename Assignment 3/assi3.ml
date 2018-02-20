@@ -50,7 +50,7 @@ let rec check_sig sign = match sign with
   | Sig((Sym(sym),Ar(n))::xs) -> check_sig(Sig([(Sym(sym),Ar(n))])) && (not_exist_in_list (Sym(sym))  (Sig(xs))) && check_sig(Sig(xs))
   | Sig([]) -> true;;
 
-  (* Checking Signture for correctness *)
+(* Checking Signture for correctness *)
 check_sig(sig1);;
 
 let ander a b = a && b;;
@@ -111,40 +111,47 @@ let rec find a lis = match lis with
   | x::xs -> if(a=x) then true else (find a xs)
   | [] -> false;;
 
+type substituion = Sub of (variable * term) list;;
+
+(* Defining 1 substion *)
+let sub_test = Sub([ x,Node(plus,[V(y);V(z)])]);;
+
+let rec subst subst1 t  = match (t,subst1) with
+  | (V(Var(s)),Sub(x)) -> (try  List.assoc (Var(s)) x with | Not_found -> V(Var(s)))
+  | (Node(x,y),Sub(z)) -> Node(x,map (subst subst1) y)
+;;
+
+let rec map2 f l = match l with
+  | []-> []
+  | ((a,b)::xs) -> (a,(f b))::(map2 f xs);;
+
+
 let rec find2 a lis = match lis with
   | (x,y)::xs -> if(a=x) then true else (find2 a xs)
   | [] -> false;;
 
-type substss = Substituon1 of (variable * term);;
+let rec get_non_repeated listA listB = match (listA,listB) with
+  | (Sub((v,tL)::xs),Sub(b)) -> if (find2 v b) then  (get_non_repeated (Sub(xs)) listB) else [v,tL]@(get_non_repeated (Sub(xs)) listB)
+  | (Sub([]),Sub(b)) -> [];;
 
-(* Defining 1 substion *)
-let substituions = [ Substituon1(x,Node(plus,[V(y);V(z)])) ];;
+let compose subst1 subst2 = match (subst1,subst2) with
+  | (Sub(x),Sub(y)) -> Sub((map2 (subst subst2) x) @ (get_non_repeated subst2 subst1)) ;;
 
-(* Each substituion is an element of the above list. Composition of substituions is a complete list in which the second substituion is appended to the first element. *)
-
-let rec applySubst subst t = match (t,subst) with
-  | (V(Var(s)),Substituon1(Var(t2),a)) -> if (s=t2) then a else V(Var(s))
-  | (Node(Sym(s),tl),_) -> Node(Sym(s), map (applySubst subst) tl);;
-
-let rec subst substList t  = match (substList,t) with
-  | (x::xs,t1) -> subst xs (applySubst x t1)
-  | ([],t1) -> t1;;
-
-(* Substituting in term using the substituion present in the list defined above *)
+(* Substituting in term using the substituion defined above *)
 termzz;;
-let term_final=(subst substituions termzz);;
+let term_final=(subst sub_test termzz);;
 wfterm sig1 term_final;;
 
-let rec mgu t1 t2 = match (t1,t2) with
-  | (V(Var(s)),V(Var(t))) -> if (s=t) then [] else [Substituon1(Var(s),V(Var(t)))]
-  | (V(Var(s)),Node(Sym(sym),[])) ->  [Substituon1(Var(s),Node(Sym(sym),[]))]
-  | (Node(Sym(sym),[]),V(Var(s))) ->  [Substituon1(Var(s),Node(Sym(sym),[]))]
-  | (V(Var(s)),Node(Sym(sym),tl)) -> if (find (Var(s)) (vars(Node(Sym(sym),tl)))) then raise NOT_UNIFIABLE else [Substituon1(Var(s),Node(Sym(sym),tl))]
-  | (Node(Sym(sym),tl),V(Var(s))) -> if (find (Var(s)) (vars(Node(Sym(sym),tl)))) then raise NOT_UNIFIABLE else [Substituon1(Var(s),Node(Sym(sym),tl))]
-  | (Node(Sym(sym1),[]),Node(Sym(sym2),[])) ->  if (sym1=sym2) then [] else raise NOT_UNIFIABLE
+ let rec mgu t1 t2 = match (t1,t2) with
+  | (V(Var(s)),V(Var(t))) -> if (s=t) then Sub([]) else Sub([(Var(s),V(Var(t)))])
+  | (V(Var(s)),Node(Sym(sym),[])) ->  Sub([(Var(s),Node(Sym(sym),[]))])
+  | (Node(Sym(sym),[]),V(Var(s))) ->  Sub([(Var(s),Node(Sym(sym),[]))])
+  | (V(Var(s)),Node(Sym(sym),tl)) -> if (find (Var(s)) (vars(Node(Sym(sym),tl)))) then raise NOT_UNIFIABLE else Sub([(Var(s),Node(Sym(sym),tl))])
+  | (Node(Sym(sym),tl),V(Var(s))) -> if (find (Var(s)) (vars(Node(Sym(sym),tl)))) then raise NOT_UNIFIABLE else Sub([(Var(s),Node(Sym(sym),tl))])
+  | (Node(Sym(sym1),[]),Node(Sym(sym2),[])) ->  if (sym1=sym2) then Sub([]) else raise NOT_UNIFIABLE
   | (Node(Sym(sym1),[]),Node(Sym(sym2),tl)) ->  raise NOT_UNIFIABLE
   | (Node(Sym(sym2),tl),Node(Sym(sym1),[])) ->  raise NOT_UNIFIABLE
-  | (Node(Sym(sym1),x::xs),Node(Sym(sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else (mgu x y)@ (mgu (Node(Sym(sym1),(map (subst (mgu x y)) xs))) (Node(Sym(sym1),(map (subst (mgu x y)) ys))))   ;;
+  | (Node(Sym(sym1),x::xs),Node(Sym(sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else compose (mgu x y) (mgu (Node(Sym(sym1),(map (subst (mgu x y)) xs))) (Node(Sym(sym1),(map (subst (mgu x y)) ys))))   ;;
 
 (* Checking the mgu for the obtained term . To be correct it should be same as the above defined substituion *)
 mgu termzz term_final;;
