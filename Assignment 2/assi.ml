@@ -22,11 +22,12 @@ type exp = Const of int
          |GreaterOrEqual of exp * exp
          |LessOrEqual of exp * exp
          |Tuple of exp list
-         |Projection of int * exp list;;
+         |Projection of int * exp;;
 
-type answer = Const of int | Const1 of bool | Tuple1 of answer list;;
 
-let table =[ "x",Const(5);"y",Const1(true) ];;
+let table =[ "x",Const(5);"y",T ];;
+
+type answer = Const of int | Const1 of bool | Tuple of answer list;;
 
 let rho s = List.assoc s table;;
 
@@ -49,8 +50,8 @@ let rec evalint lookup e= match e with
   |Division (e1,e2)-> ((evalint lookup e1)/(evalint lookup e2))
   |Modulus (e1,e2)-> ((evalint lookup e1) mod (evalint lookup e2))
   |Exponentiation (e1,e2)-> (pow((evalint lookup e1),(evalint lookup e2)))
-  (* | _ -> raise Error *)
-   ;;
+  | _ -> raise Error
+;;
 
 let rec evalbool lookup e= match e with
   |Not(e1) -> not((evalbool lookup e1))
@@ -65,8 +66,8 @@ let rec evalbool lookup e= match e with
   |LessThan(e1,e2) -> (evalint lookup e1) < (evalint lookup e2)
   |GreaterOrEqual(e1,e2) -> (evalint lookup e1) >= (evalint lookup e2)
   |LessOrEqual(e1,e2) -> (evalint lookup e1) <= (evalint lookup e2)
-  (* | _ -> raise Error  *)
-  ;;
+  | _ -> raise Error
+;;
 
 let rec eval lookup e =match e with
   |Abs(e1) ->Const(evalint lookup (Abs(e1)))
@@ -89,11 +90,11 @@ let rec eval lookup e =match e with
   |LessThan(e1,e2) -> Const1(evalbool lookup (LessThan(e1,e2)))
   |GreaterOrEqual(e1,e2) -> Const1(evalbool lookup (GreaterOrEqual(e1,e2)))
   |LessOrEqual(e1,e2) -> Const1(evalbool lookup (LessOrEqual(e1,e2)))
-  |Tuple(l) -> Tuple1(map (eval lookup) l)
-  |Projection(0,x::xs) -> eval lookup (x)
-  |Projection(i,x::xs) -> eval lookup (Projection(i-1,xs))
-  (* |Projection(_,_)-> raise Error *)
-  ;;
+  |Tuple(l) -> Tuple(map (eval lookup) l)
+  |Projection(0,Tuple(x::xs)) -> eval lookup (x)
+  |Projection(i,Tuple(x::xs)) -> eval lookup (Projection(i-1,Tuple(xs)))
+  | _ -> raise Error
+;;
 
 type opcode =CONST of int
             |ABS
@@ -116,7 +117,8 @@ type opcode =CONST of int
             |GREATEROREQUAL
             |LESSOREQUAL
             |TUPLE of opcode list list
-            |PROJECTION;;
+            |PROJECTION
+;;
 
 let rec compile e = match e with
   |Abs(e1) -> compile(e1)@[ABS]
@@ -140,7 +142,9 @@ let rec compile e = match e with
   |GreaterOrEqual(e1,e2) -> compile(e1)@compile(e2)@[GREATEROREQUAL]
   |LessOrEqual(e1,e2) -> compile(e1)@compile(e2)@[LESSOREQUAL]
   |Tuple(l) -> [TUPLE(map compile l)]
-  |Projection(n,expl) -> [CONST(n)]@[TUPLE(map compile expl)]@[PROJECTION];;
+  |Projection(n,Tuple(expl)) -> [CONST(n)]@[TUPLE(map compile expl)]@[PROJECTION]
+  | _ -> raise Error
+;;
 
 let rec execute stack tab opcodeL = match (stack,tab,opcodeL) with
   |(Const(a)::s1,t,ABS::c) -> execute (Const(abs(a))::s1) t c
@@ -155,7 +159,11 @@ let rec execute stack tab opcodeL = match (stack,tab,opcodeL) with
   |(s1,t,TT::c) -> execute (Const1(true)::s1) t c
   |(s1,t,FF::c) -> execute (Const1(false)::s1) t c
   |(Const1(x)::s1,t,NOT::c) -> execute (Const1(not(x))::s1) t c
+  |(Const(0)::s1,t,AND::c) -> execute (Const1(false)::s1) t (AND::c)
+  |(Const(n)::s1,t,AND::c) -> execute (Const1(true)::s1) t (AND::c)
   |(Const1(y)::Const1(x)::s1,t,AND::c) -> execute (Const1(x&&y)::s1) t c
+  |(Const(0)::s1,t,OR::c) -> execute (Const1(false)::s1) t (OR::c)
+  |(Const(n)::s1,t,OR::c) -> execute (Const1(true)::s1) t (OR::c)
   |(Const1(y)::Const1(x)::s1,t,OR::c) -> execute (Const1(x||y)::s1) t c
   |(Const1(y)::Const1(x)::s1,t,IMPLIES::c) ->  execute (Const1(x && y || not(x))::s1) t c
   |(Const(y)::Const(x)::s1,t,EQUAL::c) -> execute (Const1(x=y)::s1) t c
@@ -163,13 +171,13 @@ let rec execute stack tab opcodeL = match (stack,tab,opcodeL) with
   |(Const(y)::Const(x)::s1,t,LESSTHAN::c) -> execute (Const1(x<y)::s1) t c
   |(Const(y)::Const(x)::s1,t,GREATEROREQUAL::c) -> execute (Const1(x>=y)::s1) t c
   |(Const(y)::Const(x)::s1,t,LESSOREQUAL::c) -> execute (Const1(x<=y)::s1) t c
-  |(s1,t,TUPLE(l)::c) -> execute (Tuple1(map (execute [] t) l)::s1) t c
-  |(Tuple1(x::xs)::Const(0)::s1,t,PROJECTION::c) -> execute (x::s1) t c
-  |(Tuple1(x::xs)::Const(n)::s1,t,PROJECTION::c) -> execute (Tuple1(xs)::Const(n-1)::s1) t (PROJECTION::c)
+  |(s1,t,TUPLE(l)::c) -> execute (Tuple(map (execute [] t) l)::s1) t c
+  |(Tuple(x::xs)::Const(0)::s1,t,PROJECTION::c) -> execute (x::s1) t c
+  |(Tuple(x::xs)::Const(n)::s1,t,PROJECTION::c) -> execute (Tuple(xs)::Const(n-1)::s1) t (PROJECTION::c)
   |(a::xs,t,[])-> a
-  (* | (_,_,_) -> raise Error *)
-  ;;
-
+  | (_,_,_) -> raise Error
+;;
+(*
 (* Examples *)
 
 let z=Abs(Const(-3));;
@@ -248,4 +256,4 @@ execute [] table (compile ab);;
 let ac=Projection(2,[a3;x;y;z;a]);;
 eval rho (ac);;
 compile ac;;
-execute [] table (compile ac);;
+execute [] table (compile ac);; *)

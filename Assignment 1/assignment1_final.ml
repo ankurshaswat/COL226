@@ -45,7 +45,7 @@ let rec stringToList string = match string with
 
 (* val create : string -> char myString = <fun> *)
 let create string = match string with
-  | "" -> {a=[];b=[];c=String.get "" 0;d=String.get "" 0}
+  | "" -> {a=[];b=[];c=' ';d=' '}
   | string -> if (String.length string > 1)
     then {a=[String.get string 0];b=stringToList (String.sub string 1 ((String.length string)-1));c=String.get string 0;d=String.get string ((String.length string)- 1)}
     else {a=[String.get string 0];b=[];c=String.get string 0;d=String.get string 0}  ;;
