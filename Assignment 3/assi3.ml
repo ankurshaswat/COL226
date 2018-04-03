@@ -45,6 +45,10 @@ let rec not_exist_in_list target l = match (l,target) with
   | (Sig([]),Sym(tar)) -> true
   | (Sig((Sym(sym), Ar(n))::xs),Sym(tar)) -> if sym = tar then false else (not_exist_in_list (Sym(tar)) (Sig(xs)))
 
+let rec not_exist_in_list2 target l = match (l,target) with
+  | ([],s) -> true
+  | (Var(a)::xs,s) -> if a = s then false else (not_exist_in_list2 s xs);;
+
 let rec check_sig sign = match sign with
   | Sig([(Sym(sym),Ar(n))]) -> if(n<0) then false else true
   | Sig((Sym(sym),Ar(n))::xs) -> check_sig(Sig([(Sym(sym),Ar(n))])) && (not_exist_in_list (Sym(sym))  (Sig(xs))) && check_sig(Sig(xs))
@@ -57,7 +61,10 @@ let ander a b = a && b;;
 
 let sum a b= a+b;;
 
-let add_to_list a b= a@b;;
+let rec add_to_list a b= match (a,b) with
+  | ([],b) -> b
+  | (a,[]) -> a
+  | (Var(x)::xs,b) -> if (not_exist_in_list2 x b) then add_to_list xs (Var(x)::b) else add_to_list xs b;;
 
 let rec foldl f e l = match l with
   | [] -> e
@@ -142,7 +149,7 @@ termzz;;
 let term_final=(subst sub_test termzz);;
 wfterm sig1 term_final;;
 
- let rec mgu t1 t2 = match (t1,t2) with
+let rec mgu t1 t2 = match (t1,t2) with
   | (V(Var(s)),V(Var(t))) -> if (s=t) then Sub([]) else Sub([(Var(s),V(Var(t)))])
   | (V(Var(s)),Node(Sym(sym),[])) ->  Sub([(Var(s),Node(Sym(sym),[]))])
   | (Node(Sym(sym),[]),V(Var(s))) ->  Sub([(Var(s),Node(Sym(sym),[]))])
