@@ -14,8 +14,7 @@ type exp = Const of int
          | Function of string * exp
          | Call of exp * exp;;
 
-let lookup (tab,x) = match (tab,x) with
-  | (_,_) -> ([],Const(4)) ;;
+let lookup (tab,x) = List.assoc x tab;;
 
 let table_ex =[ "x",Const(5);"y",Const(6) ];;
 
@@ -36,7 +35,7 @@ type opcode = VAR of string
             | RESTORE_ENV
             | APP;;
 
-type answer = Const of int | T | F | Tuple of answer list | VClosure of ((string * answer) list) * string  *  opcode list;;
+type answer = Const1 of int | T | F | Tuple1 of answer list | VClosure of ((string * answer) list) * string  *  opcode list;;
 
 type table = Table of (string * answer) list;;
 
@@ -86,15 +85,15 @@ let rec pop_n_get_stack s n = match (s,n) with
 
 let rec evalSECD stack environment opcodeL dump = match (stack,environment,opcodeL,dump) with
   | (a::s,e,[],Dump(d)) -> a
-  | (s,e,CONST(n)::c,Dump(d)) -> evalSECD (Const(n)::s) e c (Dump(d))
+  | (s,e,CONST(n)::c,Dump(d)) -> evalSECD (Const1(n)::s) e c (Dump(d))
   | (s1,Table(xx),VAR(s)::c,Dump(d)) -> evalSECD ((List.assoc s xx)::s1) (Table(xx)) c (Dump(d))
-  | (Const(a)::Const(b)::s,e,PLUS::c,Dump(d)) -> evalSECD (Const(a+b)::s) e c (Dump(d))
-  | (Const(a)::Const(b)::s,e,MULTIPLICATION::c,Dump(d)) -> evalSECD (Const(a*b)::s) e c (Dump(d))
-  | (Const(a)::Const(b)::s,e,GREATERTHAN::c,Dump(d)) -> if (b>a) then evalSECD (T::s) e c (Dump(d)) else evalSECD (F::s) e c (Dump(d))
-  | (Const(a)::Const(b)::s,e,EQUAL::c,Dump(d)) -> if (b=a) then evalSECD (T::s) e c (Dump(d)) else evalSECD (F::s) e c (Dump(d))
+  | (Const1(a)::Const1(b)::s,e,PLUS::c,Dump(d)) -> evalSECD (Const1(a+b)::s) e c (Dump(d))
+  | (Const1(a)::Const1(b)::s,e,MULTIPLICATION::c,Dump(d)) -> evalSECD (Const1(a*b)::s) e c (Dump(d))
+  | (Const1(a)::Const1(b)::s,e,GREATERTHAN::c,Dump(d)) -> if (b>a) then evalSECD (T::s) e c (Dump(d)) else evalSECD (F::s) e c (Dump(d))
+  | (Const1(a)::Const1(b)::s,e,EQUAL::c,Dump(d)) -> if (b=a) then evalSECD (T::s) e c (Dump(d)) else evalSECD (F::s) e c (Dump(d))
   | (s,e,TT::c,Dump(d)) -> evalSECD (T::s) e c (Dump(d))
   | (s,e,FF::c,Dump(d)) -> evalSECD (F::s) e c (Dump(d))
-  | (s,e,TUPLE(n)::c,Dump(d)) -> evalSECD (Tuple(pop_n s n)::(pop_n_get_stack s n)) e c (Dump(d))
+  | (s,e,TUPLE(n)::c,Dump(d)) -> evalSECD (Tuple1(pop_n s n)::(pop_n_get_stack s n)) e c (Dump(d))
   | (T::tru::fals::s,e,IF::c,Dump(d)) ->  evalSECD (tru::s) e c (Dump(d))
   | (F::tru::fals::s,e,IF::c,Dump(d)) ->  evalSECD (fals::s) e c (Dump(d))
   | (s,Table(e),CLOSURE(x,opcodeL)::c,Dump(d)) -> evalSECD (VClosure(e,x,opcodeL)::s) (Table(e)) c (Dump(d))
