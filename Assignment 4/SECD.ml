@@ -43,6 +43,7 @@ type table = Table of (string * answer) list;;
 type closure = Closure of table * exp;;
 
 type dump = Dump of (answer list * table * opcode list) list;;
+
 let rec map f l = match l with
   | []-> []
   | x::xs -> (f x)::(map f xs);;
@@ -72,11 +73,15 @@ let rec compile e = match e with
 
 let rec pop_n s n = match (s,n) with
 | (s,0) -> []
-| (x::xs,n) -> [x] @ (pop_n xs (n-1));;
+| (x::xs,n) -> [x] @ (pop_n xs (n-1))
+| (_,_) -> raise Error
+;;
 
 let rec pop_n_get_stack s n = match (s,n) with
 | (s,0) -> s
-| (x::xs,n) -> (pop_n_get_stack xs (n-1));;
+| (x::xs,n) -> (pop_n_get_stack xs (n-1))
+| (_,_) -> raise Error
+;;
 
 
 let rec evalSECD stack environment opcodeL dump = match (stack,environment,opcodeL,dump) with
