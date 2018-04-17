@@ -73,3 +73,15 @@ hastype([{"x",boolT}],tuple([andd(true,false),const(3),plus(const(4),const(33)),
 
 hastype([],projection(const(0),tuple([andd(true,false),const(3),plus(const(4),const(33))])),T).
 hastype([],projection(const(2),tuple([andd(true,false),const(3),plus(const(4),const(33))])),T).
+
+hastype([],func(variable("x"),plus(variable("x"),const(4))),arrowT(intT,intT)).
+hastype([],func(variable("x"),plus(variable("x"),const(4))),X).
+
+hastype([],call(func(variable("x"),plus(variable("x"),const(4))),plus(plus(const(4),const(4)),const(22))),TT).
+hastype([],call(func(variable("x"),equal(plus(variable("x"),const(4)),variable("x"))),plus(plus(const(4),const(4)),const(22))),TT).
+hastype([],call(func(variable("x"),equal(plus(variable("x"),const(4)),variable("x"))),plus(plus(const(4),const(4)),const(22))),boolT).
+
+
+
+hastype([],equal(X,Y),boolT).
+hastype([],equal(and(A,B),plus(C,D)),TT).

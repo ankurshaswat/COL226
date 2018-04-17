@@ -43,7 +43,7 @@ hastype(Gamma,if_then_else(E0,E1,E2),T):-hastype(Gamma,E0,boolT),hastype(Gamma,E
 hastype(Gamma,let_in(D,E),T):-typeElaborates(Gamma,D,Gamma2),union(Gamma,Gamma2,Uni),hastype(Uni,E,T).
 
 hastype(Gamma,call(E1,E2),T2):-hastype(Gamma,E1,arrowT(T1,T2)),hastype(Gamma,E2,T1).
-hastype(Gamma,function(variable(X),E1),arrowT(T1,T2)):-hastype([{X,T1}|Gamma],E1,T2).
+hastype(Gamma,func(variable(X),E1),arrowT(T1,T2)):-hastype([{X,T1}|Gamma],E1,T2).
 
 hastype(Gamma,tuple([E1,E2]),cartesianT([T1,T2])):-hastype(Gamma,E1,T1),hastype(Gamma,E2,T2).
 hastype(Gamma,tuple([E1|Erest]),cartesianT([T1|Trest])):-hastype(Gamma,E1,T1),hastype(Gamma,tuple(Erest),cartesianT(Trest)).
