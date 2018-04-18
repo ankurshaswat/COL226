@@ -22,10 +22,16 @@ evalKrivine (Clos1(Tab([]),IfThenElse(GreaterThan(Const(1),Const(2)),Call(Functi
 
 (* evalKrivine (Clos1(Tab([]),Call(Function("x",LetIn(Parallel[SimpleDef("a",Const(2))],Plus(Var("a"),Var("x")))),Const(2)))) [];; *)
 
-evalSECD [] (Table([])) (compile (Projection(Tuple([Const(12),Const(121),Const(33)]),Const(2)))) (Dump([]));;
+(* evalSECD [] (Table([])) (compile (Projection(Tuple([Const(12),Const(121),Const(33)]),Const(2)))) (Dump([]));; *)
 
-evalSECD [] (Table([])) (compile (Letin(Parallel([SimpleDef("a",Const(1)),SimpleDef("b",Const(2)),SimpleDef("c",Const(3))]),Plus(Plus(Var("a"),Var("b")),Multiplication(Var("c"),Const(2)))),Multiplication(Const(2),Const(3)))) (Dump([]));;
+(* evalSECD [] (Table([])) (compile (Letin(Parallel([SimpleDef("a",Const(1)),SimpleDef("b",Const(2)),SimpleDef("c",Const(3))]),Plus(Plus(Var("a"),Var("b")),Multiplication(Var("c"),Const(2)))),Multiplication(Const(2),Const(3)))) (Dump([]));; *)
 
 evalSECD [] (Table([])) (compile (IfThenElse(GreaterThan(Const(4),Const(2)),Plus(Const(1),Const(3)),Plus(Const(1),Const(-4))))) (Dump([]));;
 
-evalSECD [] (Table([])) (compile (Letin(Dec([Parallel([SimpleDef("f",F)]),Sequential([SimpleDef("a",Const(1)),SimpleDef("b",Const(2)),SimpleDef("c",Const(3))])]),Plus(Plus(Var("a"),Var("b")),Multiplication(Var("c"),Const(2)))),Multiplication(Const(2),Const(3))) (Dump([]));;
+(* evalSECD [] (Table([])) (compile (Letin(Dec([Parallel([SimpleDef("f",F)]),Sequential([SimpleDef("a",Const(1)),SimpleDef("b",Const(2)),SimpleDef("c",Const(3))])]),Plus(Plus(Var("a"),Var("b")),Multiplication(Var("c"),Const(2)))),Multiplication(Const(2),Const(3))) (Dump([]));; *)
+
+evalSECD [] (Table([])) (compile (Call(Function("x",Plus(Var("x"),Const(1))),Const(2)))) (Dump([]));;
+
+evalSECD [] (Table([])) (compile (Call(Function("x",Multiplication(Var("x"),Plus(Var("x"),Const(1)))),Const(2)))) (Dump([]));;
+
+(* evalSECD [] (Table([])) (compile (Sequential([SimpleDef("a",LetIn(Parallel([SimpleDef("a",Const(1))]),Call(Function(Var("x"),Plus(Var("x"),Const(1))),Var("a"))))]),Plus(Var("a"),Const(1)))) (Dump([]));; *)
