@@ -56,8 +56,8 @@ typeElaborates([],simpleDef("Y",true),T).
 typeElaborates([],parallelDef(simpleDef("X",const(3)),simpleDef("Y",true)),T).
 typeElaborates([],parallelDef(simpleDef("X",const(3)),simpleDef("X",true)),T).
 typeElaborates([],sequentialDef(simpleDef("X",multiply(const(31),const(20))),simpleDef("Y",true)),T).
-%typeElaborates([{"X",boolT},{"Y",intT}],localDef(simpleDef("X",const(31)),parallelDef(simpleDef("X",tuple(["Y",const(3)])),simpleDef("Y",false))),T).
-%typeElaborates([{"X",boolT},{"Y",intT}],localDef(simpleDefdef("X",const(20)),parallelDef(simpleDef("X",const(3)),simpleDef("Y",false))),T).
+typeElaborates([{"X",boolT},{"Y",intT}],localDef(simpleDef("X",const(31)),parallelDef(simpleDef("X",tuple([variable("Y"),const(3)])),simpleDef("Y",false))),T).
+typeElaborates([{"X",boolT},{"Y",intT}],localDef(simpleDef("X",const(20)),parallelDef(simpleDef("X",const(3)),simpleDef("Y",false))),T).
 typeElaborates([{x,intT}],simpleDef(y,const(9)),Gamma).
 
 typeElaborates([{x,intT}],sequentialDef(simpleDef(z,true),simpleDef(y,false)),Gamma).
