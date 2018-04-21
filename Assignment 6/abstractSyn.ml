@@ -1,4 +1,4 @@
-exception Error;;
+exception ErrorUnify;;
 exception NOT_UNIFIABLE;;
 
 type variable = Var of string;;
@@ -7,7 +7,7 @@ type term = V of variable | Function of string * (term list);;
 
 type substituion = Sub of (variable * term) list;;
 
-type atomic_formula = Function of string * (term list);;
+type atomic_formula = term;;
 
 type clause = Fact of atomic_formula
             | Rule of atomic_formula * (atomic_formula list) ;;
@@ -19,6 +19,10 @@ type goal = atomic_formula list;;
 let rec map f l = match l with
   | []-> []
   | x::xs -> (f x)::(map f xs);;
+
+let rec invertmap f lvals term = match lvals with
+  | []-> []
+  | x::xs -> (f x term)::(invertmap f xs term);;
 
 let rec not_exist_in_list2 target l = match (l,target) with
   | ([],s) -> true
@@ -53,6 +57,8 @@ let rec substitute subst1 t  = match (t,subst1) with
   | (V(Var(s)),Sub(x)) -> (try  List.assoc (Var(s)) x with | Not_found -> V(Var(s)))
   | (Function(x,y),Sub(z)) -> Function(x,map (substitute subst1) y);;
 
+let substituteAF subst1 (Function(x,y))  = Function(x,map (substitute subst1) y);;
+
 let compose subst1 subst2 = match (subst1,subst2) with
   | (Sub(x),Sub(y)) -> Sub((map2 (substitute subst2) x) @ (get_non_repeated subst2 subst1)) ;;
 
@@ -71,20 +77,33 @@ let rec mgu t1 t2 = match (t1,t2) with
   | (Function((sym2),tl),Function((sym1),[])) ->  raise NOT_UNIFIABLE
   | (Function((sym1),x::xs),Function((sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else compose (mgu x y) (mgu (Function((sym1),(map (substitute (mgu x y)) xs))) (Function((sym1),(map (substitute (mgu x y)) ys))));;
 
-let rec unifyClause atomic_formula clause = match (atomic_formula,clause) with
-  | (Function(s1,tl1),Fact(Function(s2,tl2))) -> mgu (Function(s1,tl1)) (Function(s2,tl2))
-  (* | (Function(s1,tl1),Rule(af1,afl) -> *)
-  | (_,_) -> raise Error;;
+(* let rec unifyList afl program = match (afl,program) with *)
+  (* | (x::[],program) -> *)
+  (* | _ -> expr2 *)
 
-let rec unifyAtomic atomic_formula program = match (atomic_formula,program) with
-  | (atomic_formula,x::[]) -> [unifyClause atomic_formula x]
-  | (atomic_formula,x::xs) -> (try [unifyClause atomic_formula x]@(unifyAtomic atomic_formula xs)
+(* let rec unifyClause atomic_formula clause = match (atomic_formula,clause) with *)
+  (* | (_,_) -> raise Error;; *)
+
+(* let rec unifyAtomic atomic_formula program completeProg= match (atomic_formula,program) with
+  | (Function(s1,tl1),[Fact(Function(s2,tl2))]) -> [mgu (Function(s1,tl1)) (Function(s2,tl2))]
+  | (Function(s1,tl1),[Rule(Function(s2,tl2),x::xs)]) -> (unifyAtomic (substituteAF (mgu (Function(s1,tl1)) (Function(s2,tl2))) x) completeProg) (map (substituteAF (mgu (Function(s1,tl1)) (Function(s2,tl2)))) xs) completeProg
+  | (atomic_formula,x::xs) -> (try (unifyAtomic atomic_formula [x] completeProg)@(unifyAtomic atomic_formula xs completeProg)
                                with
-                               | NOT_UNIFIABLE -> unifyAtomic atomic_formula xs
+                               | NOT_UNIFIABLE -> unifyAtomic atomic_formula xs completeProg
                                | _ -> failwith "Unknown")
-  | (_,_) -> raise Error;;
+  | (_,_) -> raise Error;; *)
 
-let rec unify goal program = match (goal,program) with
-  | (x::[],program) -> unifyAtomic x program
-  (* | (x::xs,program) -> (unify ([x]) program) (unify xs program) *)
-  | (_,_) -> raise Error;;
+let rec unify goal program completeProg= match (goal,program) with
+  | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (Function(s,tl))) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg))
+  (* | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (compose (mgu x (Function(s,tl))) (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg)) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg)) *)
+  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg))
+  | (x::xs,program) -> compose (unify [x] program completeProg) (unify (map (substitute (unify [x] program completeProg)) xs) completeProg completeProg)
+  | (_,_) -> raise ErrorUnify;;
+  (* | (x::[],program) -> unifyAtomic x program program *)
+  (* | ((Fact(Function(s1,tl1)))::xs,program) -> unifyAtomic x program program *)
+  (* | (Rule(Function(s1,tl1),afl)::,program) -> unifyAtomic x program program *)
+  (* | (x::[],program) -> unifyAtomic x program program *)
+  (* | (x::[],program) -> unifyAtomic x program program *)
+  (* | (x::[],program) -> unifyAtomic x program program *)
+  (* | (x::[],program) -> unifyAtomic x program program *)
+  (* | (x::xs,program) -> unify (map (substitute (unify ([x]) program)) xs) program *)
