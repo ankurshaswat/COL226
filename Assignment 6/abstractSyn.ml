@@ -1,4 +1,5 @@
 exception ErrorUnify;;
+exception NoPossibleSolution;;
 exception NOT_UNIFIABLE;;
 
 type variable = Var of string;;
@@ -19,6 +20,11 @@ type goal = atomic_formula list;;
 let rec map f l = match l with
   | []-> []
   | x::xs -> (f x)::(map f xs);;
+
+let rec mapFunc l t= match l with
+  | []-> []
+  | x::xs -> (x t)::(mapFunc xs t);;
+
 
 let rec invertmap f lvals term = match lvals with
   | []-> []
@@ -57,6 +63,14 @@ let rec substitute subst1 t  = match (t,subst1) with
   | (V(Var(s)),Sub(x)) -> (try  List.assoc (Var(s)) x with | Not_found -> V(Var(s)))
   | (Function(x,y),Sub(z)) -> Function(x,map (substitute subst1) y);;
 
+let rec transformSingle depth subst1 t = match (t,subst1) with
+  | (V(Var(s)),Sub(x)) -> (try  List.assoc (Var(s)) x with | Not_found -> V(Var(string_of_int depth ^ s)))
+  | (Function(x,y),Sub(z)) -> Function(x,map (substitute subst1) y);;
+
+let rec substituteList substList termList = match (termList,substList) with
+  | (termList,x::[]) -> [map (substitute x) termList]
+  | (termList,x::xs) -> (substituteList [x] termList)@(substituteList xs termList);;
+
 let substituteAF subst1 (Function(x,y))  = Function(x,map (substitute subst1) y);;
 
 let compose subst1 subst2 = match (subst1,subst2) with
@@ -66,8 +80,12 @@ let rec find a lis = match lis with
   | x::xs -> if(a=x) then true else (find a xs)
   | [] -> false;;
 
+let rec mix l =match l with
+  | [] -> []
+  | x::xs -> x@(mix xs);;
+
 let rec mgu t1 t2 = match (t1,t2) with
-  | (V(Var(s)),V(Var(t))) -> if (s=t) then Sub([]) else Sub([(Var(s),V(Var(t)))])
+  | (V(Var(s)),V(Var(t))) -> if (s=t) then Sub([]) else Sub([(Var(t),V(Var(s)))])
   | (V(Var(s)),Function((sym),[])) ->  Sub([(Var(s),Function((sym),[]))])
   | (Function((sym),[]),V(Var(s))) ->  Sub([(Var(s),Function((sym),[]))])
   | (V(Var(s)),Function((sym),tl)) -> if (find (Var(s)) (vars(Function((sym),tl)))) then raise NOT_UNIFIABLE else Sub([(Var(s),Function((sym),tl))])
@@ -78,32 +96,42 @@ let rec mgu t1 t2 = match (t1,t2) with
   | (Function((sym1),x::xs),Function((sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else compose (mgu x y) (mgu (Function((sym1),(map (substitute (mgu x y)) xs))) (Function((sym1),(map (substitute (mgu x y)) ys))));;
 
 (* let rec unifyList afl program = match (afl,program) with *)
-  (* | (x::[],program) -> *)
-  (* | _ -> expr2 *)
+(* | (x::[],program) -> *)
+(* | _ -> expr2 *)
 
 (* let rec unifyClause atomic_formula clause = match (atomic_formula,clause) with *)
-  (* | (_,_) -> raise Error;; *)
+(* | (_,_) -> raise Error;; *)
 
 (* let rec unifyAtomic atomic_formula program completeProg= match (atomic_formula,program) with
-  | (Function(s1,tl1),[Fact(Function(s2,tl2))]) -> [mgu (Function(s1,tl1)) (Function(s2,tl2))]
-  | (Function(s1,tl1),[Rule(Function(s2,tl2),x::xs)]) -> (unifyAtomic (substituteAF (mgu (Function(s1,tl1)) (Function(s2,tl2))) x) completeProg) (map (substituteAF (mgu (Function(s1,tl1)) (Function(s2,tl2)))) xs) completeProg
-  | (atomic_formula,x::xs) -> (try (unifyAtomic atomic_formula [x] completeProg)@(unifyAtomic atomic_formula xs completeProg)
+   | (Function(s1,tl1),[Fact(Function(s2,tl2))]) -> [mgu (Function(s1,tl1)) (Function(s2,tl2))]
+   | (Function(s1,tl1),[Rule(Function(s2,tl2),x::xs)]) -> (unifyAtomic (substituteAF (mgu (Function(s1,tl1)) (Function(s2,tl2))) x) completeProg) (map (substituteAF (mgu (Function(s1,tl1)) (Function(s2,tl2)))) xs) completeProg
+   | (atomic_formula,x::xs) -> (try (unifyAtomic atomic_formula [x] completeProg)@(unifyAtomic atomic_formula xs completeProg)
                                with
                                | NOT_UNIFIABLE -> unifyAtomic atomic_formula xs completeProg
                                | _ -> failwith "Unknown")
-  | (_,_) -> raise Error;; *)
+   | (_,_) -> raise Error;; *)
 
-let rec unify goal program completeProg= match (goal,program) with
-  | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (Function(s,tl))) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg))
-  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg))
-  | (x::xs,program) -> compose (unify [x] program completeProg) (unify (map (substitute (unify [x] program completeProg)) xs) completeProg completeProg)
+
+let rec unify depth goal program completeProg= match (goal,program) with
+  | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (transformSingle depth (mgu x (Function(s,tl))) (Function(s,tl))))::(unify depth [x] xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
+  | (ll,[]) -> []
+  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (unify (depth+1) (map ((transformSingle depth) (mgu x (Function(s,tl)))) afl) completeProg completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
+  | (x::xs,program) ->
+    mix (mapFunc
+           (mapFunc (
+               (map (unify depth))
+                 (substituteList (unify depth [x] program completeProg) xs)
+             )
+               completeProg)
+           completeProg)
   | (_,_) -> raise ErrorUnify;;
-  (* | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (compose (mgu x (Function(s,tl))) (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg)) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg)) *)
-  (* | (x::[],program) -> unifyAtomic x program program *)
-  (* | ((Fact(Function(s1,tl1)))::xs,program) -> unifyAtomic x program program *)
-  (* | (Rule(Function(s1,tl1),afl)::,program) -> unifyAtomic x program program *)
-  (* | (x::[],program) -> unifyAtomic x program program *)
-  (* | (x::[],program) -> unifyAtomic x program program *)
-  (* | (x::[],program) -> unifyAtomic x program program *)
-  (* | (x::[],program) -> unifyAtomic x program program *)
-  (* | (x::xs,program) -> unify (map (substitute (unify ([x]) program)) xs) program *)
+(* | (x::xs,program) -> compose (unify [x] program completeProg) (unify (map (substitute (unify [x] program completeProg)) xs) completeProg completeProg) *)
+(* | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (compose (mgu x (Function(s,tl))) (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg)) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg)) *)
+(* | (x::[],program) -> unifyAtomic x program program *)
+(* | ((Fact(Function(s1,tl1)))::xs,program) -> unifyAtomic x program program *)
+(* | (Rule(Function(s1,tl1),afl)::,program) -> unifyAtomic x program program *)
+(* | (x::[],program) -> unifyAtomic x program program *)
+(* | (x::[],program) -> unifyAtomic x program program *)
+(* | (x::[],program) -> unifyAtomic x program program *)
+(* | (x::[],program) -> unifyAtomic x program program *)
+(* | (x::xs,program) -> unify (map (substitute (unify ([x]) program)) xs) program *)
