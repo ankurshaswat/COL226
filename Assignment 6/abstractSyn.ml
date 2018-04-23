@@ -1,7 +1,9 @@
 exception ErrorUnify;;
 exception NoPossibleSolution;;
 exception NOT_UNIFIABLE;;
-
+exception Error;;
+exception ErrorSubAF;;
+exception ErrorSubList;;
 type variable = Var of string;;
 
 type term = V of variable | Function of string * (term list);;
@@ -64,14 +66,19 @@ let rec substitute subst1 t  = match (t,subst1) with
   | (Function(x,y),Sub(z)) -> Function(x,map (substitute subst1) y);;
 
 let rec transformSingle depth subst1 t = match (t,subst1) with
-  | (V(Var(s)),Sub(x)) -> (try  List.assoc (Var(s)) x with | Not_found -> V(Var(string_of_int depth ^ s)))
+  | (V(Var(s)),Sub(x)) -> (try  List.assoc (Var(s)) x with | Not_found -> raise Error)
+   (* V(Var(string_of_int depth ^ s))) *)
   | (Function(x,y),Sub(z)) -> Function(x,map (substitute subst1) y);;
 
 let rec substituteList substList termList = match (termList,substList) with
   | (termList,x::[]) -> [map (substitute x) termList]
-  | (termList,x::xs) -> (substituteList [x] termList)@(substituteList xs termList);;
+  | (termList,[]) -> [termList]
+  | (termList,x::xs) -> (substituteList [x] termList)@(substituteList xs termList)
+  (* | (_,_) -> raise ErrorSubList;; *)
 
-let substituteAF subst1 (Function(x,y))  = Function(x,map (substitute subst1) y);;
+let substituteAF subst1 t  = match t with
+| Function(x,y) ->Function(x,map (substitute subst1) y)
+| _ -> raise ErrorSubAF;;
 
 let compose subst1 subst2 = match (subst1,subst2) with
   | (Sub(x),Sub(y)) -> Sub((map2 (substitute subst2) x) @ (get_non_repeated subst2 subst1)) ;;
@@ -115,14 +122,14 @@ let rec mgu t1 t2 = match (t1,t2) with
 let rec unify depth goal program completeProg= match (goal,program) with
   | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (transformSingle depth (mgu x (Function(s,tl))) (Function(s,tl))))::(unify depth [x] xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
   | (ll,[]) -> []
-  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (unify (depth+1) (map ((transformSingle depth) (mgu x (Function(s,tl)))) afl) completeProg completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
+  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (unify (depth+1) (map ((transformSingle depth) (mgu x (Function(s,tl)))) afl) completeProg completeProg)@(unify depth ([x]) xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
   | (x::xs,program) ->
     mix (mapFunc
            (mapFunc (
                (map (unify depth))
                  (substituteList (unify depth [x] program completeProg) xs)
              )
-               completeProg)
+               program)
            completeProg)
   | (_,_) -> raise ErrorUnify;;
 (* | (x::xs,program) -> compose (unify [x] program completeProg) (unify (map (substitute (unify [x] program completeProg)) xs) completeProg completeProg) *)
