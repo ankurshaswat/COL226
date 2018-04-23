@@ -72,6 +72,12 @@ let rec transformSingle depth subst1 t = match (t,subst1) with
   (* Not_found -> raise Error) *)
   | (Function(x,y),Sub(z)) -> Function(x,map (transformSingle depth subst1) y);;
 
+
+let rec transform depth t = match t with
+  | V(Var(s)) ->  V(Var((string_of_int (depth)) ^ s))
+  (* Not_found -> raise Error) *)
+  | Function(x,y) -> Function(x,map (transform depth) y);;
+
 let rec substituteList substList termList = match (termList,substList) with
   | (termList,x::[]) -> [map (substitute x) termList]
   | (termList,[]) -> raise NOT_UNIFIABLE
@@ -122,9 +128,9 @@ let rec mgu t1 t2 = match (t1,t2) with
 
 
 let rec unify depth goal program completeProg= match (goal,program) with
-  | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (transformSingle depth (mgu x (Function(s,tl))) (Function(s,tl))))::(unify depth [x] xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
+  | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (transform depth (Function(s,tl))))::(unify depth [x] xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
   | (ll,[]) -> []
-  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (unify (depth+1) (map (transformSingle (depth+1) (mgu x (Function(s,tl)))) afl) completeProg completeProg)@(unify depth ([x]) xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
+  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (map (compose (mgu x (transform (depth+1) (Function(s,tl))))) (unify (depth+1) (map (substituteAF (mgu x (transform (depth+1) (Function(s,tl))))) (map (transform (depth+1)) afl)) completeProg completeProg))@(unify depth ([x]) xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
   | (x::xs,program) ->
     mix (mapFunc
            (mapFunc (
