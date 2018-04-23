@@ -65,4 +65,6 @@ fact_edge_ic; fact_path_xx; rule_path_xy; rule_path_xy'];;
 
 let prog2 = [fact_edge_ab; fact_edge_be; fact_path_xx; rule_path_xy; rule_path_xy'];;
 
+(* let ss = mgu (Function("path", [V(Var("W")); Function("e", [])])) (Function("path", [V(Var("X")); V(Var("Y"))]));; *)
+(* transformSingle 1 ss (Function("edge", [V(Var("X")); V(Var("Z"))]));; *)
 unify 0 [goal_W3p] prog2 prog2;;
