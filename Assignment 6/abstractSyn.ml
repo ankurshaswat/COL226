@@ -95,10 +95,10 @@ let rec mgu t1 t2 = match (t1,t2) with
 
 let rec unify goal program completeProg= match (goal,program) with
   | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (Function(s,tl))) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg))
-  (* | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (compose (mgu x (Function(s,tl))) (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg)) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg)) *)
   | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg))
   | (x::xs,program) -> compose (unify [x] program completeProg) (unify (map (substitute (unify [x] program completeProg)) xs) completeProg completeProg)
   | (_,_) -> raise ErrorUnify;;
+  (* | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (compose (mgu x (Function(s,tl))) (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg)) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg)) *)
   (* | (x::[],program) -> unifyAtomic x program program *)
   (* | ((Fact(Function(s1,tl1)))::xs,program) -> unifyAtomic x program program *)
   (* | (Rule(Function(s1,tl1),afl)::,program) -> unifyAtomic x program program *)
