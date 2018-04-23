@@ -130,7 +130,7 @@ let rec mgu t1 t2 = match (t1,t2) with
 let rec unify depth goal program completeProg= match (goal,program) with
   | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (transform depth (Function(s,tl))))::(unify depth [x] xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
   | (ll,[]) -> []
-  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (map (compose (mgu x (transform (depth+1) (Function(s,tl))))) (unify (depth+1) (map (substituteAF (mgu x (transform (depth+1) (Function(s,tl))))) (map (transform (depth+1)) afl)) completeProg completeProg))@(unify depth ([x]) xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
+  | (x::[],Rule(Function(s,tl),afl)::xs) -> (try mapFunc ((map compose) ((unify (depth+1) (map (substituteAF (mgu x (transform (depth+1) (Function(s,tl))))) (map (transform (depth+1)) afl))) completeProg completeProg))  (mgu x (transform (depth+1) (Function(s,tl))))@(unify depth ([x]) xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
   | (x::xs,program) ->
     mix (mapFunc
            (mapFunc (
