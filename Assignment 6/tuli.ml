@@ -69,6 +69,20 @@ let prog = [fact_edge_ab; fact_edge_be; fact_edge_ac; fact_edge_ce;fact_edge_ic;
 (* let ss = mgu (Function("path", [V(Var("W")); Function("e", [])])) (Function("path", [V(Var("X")); V(Var("Y"))]));; *)
 (* transformSingle 1 ss (Function("edge", [V(Var("X")); V(Var("Z"))]));; *)
 (* let subAns=unify 0 [goal_W3p] prog2 prog2;; *)
-let subAns=unify 0 [goal_W3p] prog prog;;
+(* let subAns=unify 0 [goal_W3p] prog prog;; *)
 (* let subAns=unify 0 [goal_aap] prog prog;; *)
-prolog [goal_W3p] subAns;;
+(* prolog [goal_W3p] subAns;; *)
+
+
+
+run_prolog [goal_aap] prog;;
+run_prolog [goal_ace] prog;;
+(* run_prolog [goal_aie] prog;; *)
+run_prolog [goal_Wcp] prog;;
+run_prolog [goal_acp] prog;;
+run_prolog [goal_aWp] prog;;
+run_prolog [goal_aWe] prog;;
+run_prolog [goal_aep] prog;;
+(* run_prolog [goal_aip] prog;; *)
+run_prolog [goal_Wip] prog;;
+run_prolog [goal_W3p;goal_aWe] prog;;

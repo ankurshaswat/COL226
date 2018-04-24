@@ -2,6 +2,7 @@ exception ErrorUnify;;
 exception NoPossibleSolution;;
 exception NOT_UNIFIABLE;;
 exception Error;;
+exception False;;
 exception Error1;;
 exception Error2;;
 exception ErrorSubAF;;
@@ -94,48 +95,6 @@ let rec mgu t1 t2 = match (t1,t2) with
   | (Function((sym2),tl),Function((sym1),[])) ->  raise NOT_UNIFIABLE
   | (Function((sym1),x::xs),Function((sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else (let unifierVar = (mgu x y) in (let mapperVar = map (substitute unifierVar) in compose unifierVar (mgu (Function((sym1),(mapperVar xs))) (Function((sym1),(mapperVar ys))))));;
 
-(* let rec unifyList afl program = match (afl,program) with *)
-(* | (x::[],program) -> *)
-(* | _ -> expr2 *)
-
-(* let rec unifyClause atomic_formula clause = match (atomic_formula,clause) with *)
-(* | (_,_) -> raise Error;; *)
-
-(* let rec unifyAtomic atomic_formula program completeProg= match (atomic_formula,program) with
-   | (Function(s1,tl1),[Fact(Function(s2,tl2))]) -> [mgu (Function(s1,tl1)) (Function(s2,tl2))]
-   | (Function(s1,tl1),[Rule(Function(s2,tl2),x::xs)]) -> (unifyAtomic (substituteAF (mgu (Function(s1,tl1)) (Function(s2,tl2))) x) completeProg) (map (substituteAF (mgu (Function(s1,tl1)) (Function(s2,tl2)))) xs) completeProg
-   | (atomic_formula,x::xs) -> (try (unifyAtomic atomic_formula [x] completeProg)@(unifyAtomic atomic_formula xs completeProg)
-                               with
-                               | NOT_UNIFIABLE -> unifyAtomic atomic_formula xs completeProg
-                               | _ -> failwith "Unknown")
-   | (_,_) -> raise Error;; *)
-
-
-(* let rec unify depth goal program completeProg= match (goal,program) with
-   | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (transform depth (Function(s,tl))))::(unify depth [x] xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
-   | (ll,[]) -> []
-   | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (map (compose (mgu x (transform (depth+1) (Function(s,tl))))) (unify (depth+1) (map (substituteAF (mgu x (transform (depth+1) (Function(s,tl))))) (map (transform (depth+1)) afl)) completeProg completeProg))@(unify depth ([x]) xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
-   (* | (x::[],Rule(Function(s,tl),afl)::xs) -> (try mapFunc ((map compose) ((unify (depth+1) (map (substituteAF (mgu x (transform (depth+1) (Function(s,tl))))) (map (transform (depth+1)) afl))) completeProg completeProg))  (mgu x (transform (depth+1) (Function(s,tl))))@(unify depth ([x]) xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg)) *)
-   | (x::xs,program) ->
-    mix (mapFunc
-           (mapFunc (
-               (map (unify depth))
-                 (substituteList (unify depth [x] program completeProg) xs)
-             )
-               program)
-           completeProg)
-   | (_,_) -> raise ErrorUnify;; *)
-(* | (x::xs,program) -> compose (unify [x] program completeProg) (unify (map (substitute (unify [x] program completeProg)) xs) completeProg completeProg) *)
-(* | (x::[],Rule(Function(s,tl),afl)::xs) -> (try (compose (mgu x (Function(s,tl))) (unify (map (substituteAF (mgu x (Function(s,tl)))) afl) completeProg completeProg)) with | NOT_UNIFIABLE -> (unify ([x]) xs completeProg)) *)
-(* | (x::[],program) -> unifyAtomic x program program *)
-(* | ((Fact(Function(s1,tl1)))::xs,program) -> unifyAtomic x program program *)
-(* | (Rule(Function(s1,tl1),afl)::,program) -> unifyAtomic x program program *)
-(* | (x::[],program) -> unifyAtomic x program program *)
-(* | (x::[],program) -> unifyAtomic x program program *)
-(* | (x::[],program) -> unifyAtomic x program program *)
-(* | (x::[],program) -> unifyAtomic x program program *)
-(* | (x::xs,program) -> unify (map (substitute (unify ([x]) program)) xs) program *)
-
 let rec composer l1 ll2 =match (l1,ll2) with
   | (x::xs,y::ys) ->  (match y with
       | [] -> (composer xs ys)
@@ -145,15 +104,6 @@ let rec composer l1 ll2 =match (l1,ll2) with
   | ([],y::ys) -> raise Error1
   | (ll,[]) -> raise Error2;;
 
-(* let rec applyElementWise l1 l2 = match (l1,l2) with
-   | (x::[],y::[])-> (x y)
-   | (x::xs,y::ys) -> (x y)@(applyElementWise xs ys)
-   | ([],l) -> []
-   | (l,[]) -> []
-   ;; *)
-(* let rec mix l =match l with
-   | [] -> []
-   | x::xs -> x@(mix xs);; *)
 let rec mix l =match l with
   | [] -> []
   | x::[] -> x
@@ -177,10 +127,8 @@ let rec unify depth goal program completeProg= match (goal,program) with
   | (x::[],Fact(Function(s,tl))::xs) -> let smallTempVar = (unify depth [x] xs completeProg)  in
     (try (mgu x (transform (depth+1) (Function(s,tl))))::smallTempVar with | NOT_UNIFIABLE -> smallTempVar)
   | (ll,[]) -> []
-  (* | (x::[],Rule(Function(s,tl),afl)::xs) -> *)
-  (* (try (map (compose (mgu x (transform (depth+1) (Function(s,tl))))) (unify (depth+1) (check (substitute (mgu x (transform (depth+1) (Function(s,tl)))) (transform (depth+1) (Function(s,tl)))) (map (substituteAF (mgu x (transform (depth+1) (Function(s,tl))))) (map (transform (depth+1)) afl))) completeProg completeProg))@(unify depth ([x]) xs completeProg) *)
-  (* with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg)) *)
-  | (x::[],Rule(Function(s,tl),afl)::xs) -> let transformedFunc = (transform (depth+1) (Function(s,tl))) in
+  | (x::[],Rule(Function(s,tl),afl)::xs) ->
+    let transformedFunc = (transform (depth+1) (Function(s,tl))) in
     (let anotherTempVar= (unify depth ([x]) xs completeProg) in
      (try  (let tempVar = (mgu x transformedFunc) in
             (map (compose tempVar) (unify (depth+1) (check (substitute tempVar transformedFunc) (map (substituteAF tempVar) (map (transform (depth+1)) afl))) completeProg completeProg)))@anotherTempVar
@@ -191,4 +139,17 @@ let rec unify depth goal program completeProg= match (goal,program) with
       | l -> mix (composer l (mapFunc(mapFunc((map (unify depth)) (substituteList l xs)) program) completeProg))
     );;
 
-let prolog goal subLis = map(mapFunc((map substitute) subLis)) goal;;
+let rec subster goalList subLis = match (goalList,subLis) with
+  | (goalList,x::[]) -> [map (substitute x) goalList]
+  | (goalList,x::xs) -> [map (substitute x) goalList]@(subster goalList xs)
+  | (_,[]) -> raise False;;
+
+(* let prolog goals subLis = match subLis with
+   | [] -> raise False
+   | _ -> subster goals subLis;; *)
+
+let rec removeDup goalList = match (goalList) with
+  | []-> []
+  | (x::xs) -> let unduplicatedList = (removeDup xs) in (if (find x unduplicatedList) then unduplicatedList else x::unduplicatedList);;
+
+let run_prolog goalList program = removeDup (subster goalList (unify 0 goalList program program));;
