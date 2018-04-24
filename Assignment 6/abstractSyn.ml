@@ -61,7 +61,7 @@ let rec find2 a lis = match lis with
   | [] -> false;;
 
 let rec get_non_repeated listA listB = match (listA,listB) with
-  | (Sub((v,tL)::xs),Sub(b)) -> if (find2 v b) then  (get_non_repeated (Sub(xs)) listB) else [v,tL]@(get_non_repeated (Sub(xs)) listB)
+  | (Sub((v,tL)::xs),Sub(b)) -> let tempVar = (get_non_repeated (Sub(xs)) listB) in (if (find2 v b) then tempVar  else [v,tL]@tempVar)
   | (Sub([]),Sub(b)) -> [];;
 
 let rec substitute subst1 t  = match (t,subst1) with
@@ -70,16 +70,11 @@ let rec substitute subst1 t  = match (t,subst1) with
 
 let rec transformSingle depth subst1 t = match (t,subst1) with
   | (V(Var(s)),Sub(x)) -> (try  (List.assoc (Var(s)) x) with | Not_found -> V(Var((string_of_int (depth)) ^ s)))
-
-  (* Not_found -> raise Error) *)
   | (Function(x,y),Sub(z)) -> Function(x,map (transformSingle depth subst1) y);;
-
 
 let rec transform depth t = match t with
   | V(Var(s)) ->  V(Var((string_of_int (depth)) ^ s))
-  (* Not_found -> raise Error) *)
   | Function(x,y) -> Function(x,map (transform depth) y);;
-
 
 let compose subst1 subst2 = match (subst1,subst2) with
   | (Sub(x),Sub(y)) -> Sub((map2 (substitute subst2) x) @ (get_non_repeated subst2 subst1)) ;;
@@ -87,7 +82,6 @@ let compose subst1 subst2 = match (subst1,subst2) with
 let rec find a lis = match lis with
   | x::xs -> if(a=x) then true else (find a xs)
   | [] -> false;;
-
 
 let rec mgu t1 t2 = match (t1,t2) with
   | (V(Var(s)),V(Var(t))) -> if (s=t) then Sub([]) else Sub([(Var(t),V(Var(s)))])
@@ -98,7 +92,7 @@ let rec mgu t1 t2 = match (t1,t2) with
   | (Function((sym1),[]),Function((sym2),[])) ->  if (sym1=sym2) then Sub([]) else raise NOT_UNIFIABLE
   | (Function((sym1),[]),Function((sym2),tl)) ->  raise NOT_UNIFIABLE
   | (Function((sym2),tl),Function((sym1),[])) ->  raise NOT_UNIFIABLE
-  | (Function((sym1),x::xs),Function((sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else compose (mgu x y) (mgu (Function((sym1),(map (substitute (mgu x y)) xs))) (Function((sym1),(map (substitute (mgu x y)) ys))));;
+  | (Function((sym1),x::xs),Function((sym2),y::ys)) ->  if (sym1<>sym2) then raise NOT_UNIFIABLE else (let unifierVar = (mgu x y) in (let mapperVar = map (substitute unifierVar) in compose unifierVar (mgu (Function((sym1),(mapperVar xs))) (Function((sym1),(mapperVar ys))))));;
 
 (* let rec unifyList afl program = match (afl,program) with *)
 (* | (x::[],program) -> *)
@@ -179,16 +173,22 @@ let rec check ff afl = match (ff,afl) with
   | (_,[]) -> [];;
 
 let rec unify depth goal program completeProg= match (goal,program) with
-  | (x::[],Fact(Function(s,tl))::xs) -> (try (mgu x (transform (depth+1) (Function(s,tl))))::(unify depth [x] xs completeProg) with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
+  | ([],ll) -> [Sub[]]
+  | (x::[],Fact(Function(s,tl))::xs) -> let smallTempVar = (unify depth [x] xs completeProg)  in
+    (try (mgu x (transform (depth+1) (Function(s,tl))))::smallTempVar with | NOT_UNIFIABLE -> smallTempVar)
   | (ll,[]) -> []
-  | (x::[],Rule(Function(s,tl),afl)::xs) ->
-    (try (map (compose (mgu x (transform (depth+1) (Function(s,tl))))) (unify (depth+1) (check (substitute (mgu x (transform (depth+1) (Function(s,tl)))) (transform (depth+1) (Function(s,tl)))) (map (substituteAF (mgu x (transform (depth+1) (Function(s,tl))))) (map (transform (depth+1)) afl))) completeProg completeProg))@(unify depth ([x]) xs completeProg)
-     with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg))
+  (* | (x::[],Rule(Function(s,tl),afl)::xs) -> *)
+  (* (try (map (compose (mgu x (transform (depth+1) (Function(s,tl))))) (unify (depth+1) (check (substitute (mgu x (transform (depth+1) (Function(s,tl)))) (transform (depth+1) (Function(s,tl)))) (map (substituteAF (mgu x (transform (depth+1) (Function(s,tl))))) (map (transform (depth+1)) afl))) completeProg completeProg))@(unify depth ([x]) xs completeProg) *)
+  (* with | NOT_UNIFIABLE -> (unify depth ([x]) xs completeProg)) *)
+  | (x::[],Rule(Function(s,tl),afl)::xs) -> let transformedFunc = (transform (depth+1) (Function(s,tl))) in
+    (let anotherTempVar= (unify depth ([x]) xs completeProg) in
+     (try  (let tempVar = (mgu x transformedFunc) in
+            (map (compose tempVar) (unify (depth+1) (check (substitute tempVar transformedFunc) (map (substituteAF tempVar) (map (transform (depth+1)) afl))) completeProg completeProg)))@anotherTempVar
+      with | NOT_UNIFIABLE -> anotherTempVar))
 
   | (x::xs,program) -> (match (unify depth [x] program completeProg) with
       | [] -> []
       | l -> mix (composer l (mapFunc(mapFunc((map (unify depth)) (substituteList l xs)) program) completeProg))
-    )
-  | (_,_) -> raise ErrorUnify;;
+    );;
 
 let prolog goal subLis = map(mapFunc((map substitute) subLis)) goal;;
