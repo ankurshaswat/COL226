@@ -123,6 +123,7 @@ let rec check ff afl = match (ff,afl) with
   | (_,[]) -> [];;
 
 let rec unify depth goal program completeProg= match (goal,program) with
+  | (Function("CUT",[])::[],program) -> [Sub[]]
   | ([],ll) -> [Sub[]]
   | (x::[],Fact(Function(s,tl))::xs) -> let smallTempVar = (unify depth [x] xs completeProg)  in
     (try (mgu x (transform (depth+1) (Function(s,tl))))::smallTempVar with | NOT_UNIFIABLE -> smallTempVar)
@@ -133,7 +134,10 @@ let rec unify depth goal program completeProg= match (goal,program) with
      (try  (let tempVar = (mgu x transformedFunc) in
             (map (compose tempVar) (unify (depth+1) (check (substitute tempVar transformedFunc) (map (substituteAF tempVar) (map (transform (depth+1)) afl))) completeProg completeProg)))@anotherTempVar
       with | NOT_UNIFIABLE -> anotherTempVar))
-
+  | (x::Function("CUT",[])::xs,program) -> (match (unify depth [x] program completeProg) with
+      | [] -> []
+      | l -> mix (composer [List.nth l 0] (mapFunc(mapFunc((map (unify depth)) (substituteList [List.nth l 0] xs)) program) completeProg))
+    )
   | (x::xs,program) -> (match (unify depth [x] program completeProg) with
       | [] -> []
       | l -> mix (composer l (mapFunc(mapFunc((map (unify depth)) (substituteList l xs)) program) completeProg))
@@ -152,4 +156,4 @@ let rec removeDup goalList = match (goalList) with
   | []-> []
   | (x::xs) -> let unduplicatedList = (removeDup xs) in (if (find x unduplicatedList) then unduplicatedList else x::unduplicatedList);;
 
-let run_prolog goalList program = removeDup (subster goalList (unify 0 goalList program program));;
+let run_prolog goalList program =  removeDup (subster goalList (unify 0 goalList program program));;
