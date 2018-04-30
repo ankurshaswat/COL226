@@ -29,11 +29,12 @@ open PrologAbstractSyntax
 
 %start clauselist
 %type <PrologAbstractSyntax.program> clauselist
-
+%start atomicformulalist
+%type <PrologAbstractSyntax.goal> atomicformulalist
 %%
 
 clauselist: clause PERIOD clauselist  { [$1]@($3) }
-    | clause PERIOD         { [$1] }
+    | clause PERIOD       { [$1] }
 
 clause: atomicformula RULE_IMPLICATION atomicformulalist { Rule($1,$3) }
     | atomicformula          { Fact($1) }

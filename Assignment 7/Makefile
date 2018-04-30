@@ -7,7 +7,8 @@ all:
 	ocamlc -c PrologLexer.ml
 	ocamlc -c Prolog.ml
 	ocamlmktop -o Prolog.top PrologAbstractSyntax.cmo PrologParser.cmo PrologLexer.cmo Prolog.cmo
+	ocamlc -o Prolog PrologAbstractSyntax.cmo PrologParser.cmo PrologLexer.cmo Prolog.cmo
 	# ocamlmktop -o Prolog.top PrologAbstractSyntax.cmo PrologLexer.cmo Prolog.cmo
 
 clean:
-	rm *.top *.cmo *.cmi *.mli PrologLexer.ml PrologParser.ml
+	rm *.top *.cmo *.cmi *.mli PrologLexer.ml PrologParser.ml Prolog

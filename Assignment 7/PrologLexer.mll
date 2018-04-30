@@ -20,8 +20,6 @@ rule token = parse
   | "|"                { LISTSEPERATOR}
   | "]"                { RBRACKET}
 
-  | "_"               {OTHERS}
-
   | "{"                { LCURLY }
   | "}"                { RCURLY }
 
