@@ -54,5 +54,42 @@ term:  variable  { V($1) }
 	| LBRACKET termlist RBRACKET { Function("List",$2) }
 	| LBRACKET term LISTSEPERATOR termlist RBRACKET { Function("List",[$2]@($4)) }
 	| LCURLY term COMMA term RCURLY { Function("Pair",[$2;$4])}
+	| intexpr { Function(string_of_int $1,[]) }
+	| boolexpr { Function(string_of_bool $1,[]) }
+
+intexpr: subexpr MINUS intexpr { $1-$3 }
+		| subexpr {$1}
+		| MINUS subexpr {(-1)*($2)}
+
+subexpr: subexpr1 PLUS subexpr { $1+$3 }
+		| subexpr1 {$1}
+		| PLUS subexpr1 {$2}
+
+subexpr1: subexpr2 MULTIPLICATION subexpr1 { $1*$3 }
+		| subexpr2 {$1}
+
+subexpr2: subexpr3 DIVISION subexpr2 { $1/$3 }
+		| subexpr3 {$1}
+
+subexpr3: subexpr4 MODULUS subexpr3 { $1 mod $3}
+	| subexpr4 {$1}
+
+subexpr4: subexpr5 EXPONENTIATION subexpr4 { int_of_float ((float_of_int $1) ** (float_of_int $3))}
+	| subexpr5 {$1}
+
+
+
+subexpr5: LPAREN intexpr RPAREN { $2 }
+		| Int {$1}
+
+bool: TRUE { true }
+	| FALSE { false }
+
+boolexpr: intexpr EQUAL intexpr { $1=$3 }
+	| boolexpr EQUAL boolexpr { $1=$3 }
+	| intexpr GREATER intexpr { $1>$3}
+	| intexpr GREATEREQUAL intexpr { $1>=$3}
+	| intexpr LESS intexpr { $1<$3}
+	| intexpr LESSEQUAL intexpr { $1<=$3}
 
 variable: Var      { Var($1) }
