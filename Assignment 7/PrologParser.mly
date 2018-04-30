@@ -51,11 +51,11 @@ termlist: term COMMA termlist { [$1]@($3) }
 term:  variable  { V($1) }
 	|  Const LPAREN termlist RPAREN   { Function($1,$3) }
 	| Const { Function($1,[]) }
-	| LBRACKET termlist RBRACKET { Function("List",$2) }
-	| LBRACKET term LISTSEPERATOR termlist RBRACKET { Function("List",[$2]@($4)) }
-	| LCURLY term COMMA term RCURLY { Function("Pair",[$2;$4])}
-	| intexpr { Function(string_of_int $1,[]) }
-	| boolexpr { Function(string_of_bool $1,[]) }
+	| LBRACKET termlist RBRACKET { Function("0List",$2) }
+	| LBRACKET term LISTSEPERATOR termlist RBRACKET { Function("0List",[$2]@($4)) }
+	| LCURLY term COMMA term RCURLY { Function("0Pair",[$2;$4])}
+	| intexpr { Function("0"^(string_of_int $1),[]) }
+	| boolexpr { Function("0"^(string_of_bool $1),[]) }
 
 intexpr: subexpr MINUS intexpr { $1-$3 }
 		| subexpr {$1}
